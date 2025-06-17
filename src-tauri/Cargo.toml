@@ -23,7 +23,6 @@ branch = "wallet"
 default-features = false
 
 [dependencies]
-wallet-macros = { path = "./wallet-macros" }
 tauri = { version = "2", features = [
     "macos-private-api",
     "tray-icon",

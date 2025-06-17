@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use tauri::Emitter;
 #[cfg(all(feature = "gui", desktop))]
 use tauri_plugin_dialog::DialogExt;
-use wallet_macros::tauri_command;
 
 #[derive(Debug, Serialize)]
 pub struct BuildInfo {
@@ -11,7 +10,7 @@ pub struct BuildInfo {
     pub commit: String,
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub fn get_build_info() -> BuildInfo {
     let commit = env!("git_commit").to_string();
     let time = env!("build_time").to_string();
@@ -25,7 +24,7 @@ pub struct UpdateInfo {
     pub url: String,
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub async fn update_info() -> Result<UpdateInfo, String> {
     let resp = reqwest::get(
         "https://raw.githubusercontent.com/VxBlocks/vxb_neptune_wallet/refs/heads/main/update.json",

@@ -14,7 +14,6 @@ use tracing_subscriber::{
 };
 
 use crate::config::Config;
-use wallet_macros::tauri_command;
 
 static LOG_HANDLER: OnceCell<
     Mutex<
@@ -96,7 +95,8 @@ fn build_target_filter(level: &str) -> tracing_subscriber::filter::Targets {
     ])
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub fn get_logs() -> Vec<String> {
     let logs = unsafe { LOGS.get_unchecked() }.lock().unwrap();
     logs.iter()
@@ -104,13 +104,13 @@ pub fn get_logs() -> Vec<String> {
         .collect()
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub fn clear_logs() {
     let mut logs = unsafe { LOGS.get_unchecked() }.lock().unwrap();
     logs.clear();
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub fn set_log_level(level: &str) {
     let handler = LOG_HANDLER.get().unwrap().lock().unwrap();
     if let Err(e) = handler.reload(build_target_filter(level)) {
@@ -120,7 +120,7 @@ pub fn set_log_level(level: &str) {
     let _ = config.set_log_level(level);
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub fn get_log_level() -> String {
     let handler = LOG_HANDLER.get().unwrap().lock().unwrap();
     let current = handler.clone_current();
@@ -135,7 +135,7 @@ pub fn get_log_level() -> String {
     return "info".to_string();
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub fn log(level: &str, message: &str) {
     match level {
         "trace" => tracing::trace!("{}", message),

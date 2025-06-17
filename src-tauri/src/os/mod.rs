@@ -1,9 +1,8 @@
 use os_info::Info;
 #[cfg(target_os = "windows")]
 use os_info::Version::Semantic;
-use wallet_macros::tauri_command;
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub fn os_info() -> Info {
     let info = os_info::get();
 
@@ -19,12 +18,12 @@ pub fn os_info() -> Info {
     // println!("Architecture: {:#?}", info.architecture());
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub fn platform() -> String {
     std::env::consts::OS.to_string()
 }
 
-#[tauri_command]
+#[cfg_attr(feature = "gui", tauri::command)]
 pub fn is_win11() -> bool {
     #[cfg(target_os = "windows")]
     {
