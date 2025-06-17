@@ -3740,7 +3740,6 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "wallet-macros",
  "zstd",
 ]
 
@@ -7665,14 +7664,6 @@ checksum = "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
 dependencies = [
  "same-file",
  "winapi-util",
-]
-
-[[package]]
-name = "wallet-macros"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn 2.0.100",
 ]
 
 [[package]]

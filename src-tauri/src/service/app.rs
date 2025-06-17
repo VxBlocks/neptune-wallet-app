@@ -4,6 +4,7 @@ use tauri::Emitter;
 #[cfg(all(feature = "gui", desktop))]
 use tauri_plugin_dialog::DialogExt;
 
+#[cfg(feature = "gui")]
 #[derive(Debug, Serialize)]
 pub struct BuildInfo {
     pub time: String,
@@ -11,6 +12,7 @@ pub struct BuildInfo {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg(feature = "gui")]
 pub fn get_build_info() -> BuildInfo {
     let commit = env!("git_commit").to_string();
     let time = env!("build_time").to_string();
@@ -25,6 +27,7 @@ pub struct UpdateInfo {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg(feature = "gui")]
 pub async fn update_info() -> Result<UpdateInfo, String> {
     let resp = reqwest::get(
         "https://raw.githubusercontent.com/VxBlocks/vxb_neptune_wallet/refs/heads/main/update.json",

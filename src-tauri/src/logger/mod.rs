@@ -1,10 +1,5 @@
 use once_cell::sync::OnceCell;
-use std::{
-    collections::VecDeque,
-    io::Write,
-    str::FromStr,
-    sync::{Arc, Mutex},
-};
+use std::{collections::VecDeque, io::Write, str::FromStr, sync::Mutex};
 use tracing_subscriber::{
     filter,
     fmt::{self, MakeWriter},
@@ -13,6 +8,7 @@ use tracing_subscriber::{
     util::SubscriberInitExt,
 };
 
+#[cfg(feature = "gui")]
 use crate::config::Config;
 
 static LOG_HANDLER: OnceCell<
@@ -105,22 +101,25 @@ pub fn get_logs() -> Vec<String> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg(feature = "gui")]
 pub fn clear_logs() {
     let mut logs = unsafe { LOGS.get_unchecked() }.lock().unwrap();
     logs.clear();
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg(feature = "gui")]
 pub fn set_log_level(level: &str) {
     let handler = LOG_HANDLER.get().unwrap().lock().unwrap();
     if let Err(e) = handler.reload(build_target_filter(level)) {
         tracing::error!("Failed to reload log handler: {}", e);
     };
-    let config = crate::service::get_state::<Arc<Config>>();
+    let config = crate::service::get_state::<std::sync::Arc<Config>>();
     let _ = config.set_log_level(level);
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg(feature = "gui")]
 pub fn get_log_level() -> String {
     let handler = LOG_HANDLER.get().unwrap().lock().unwrap();
     let current = handler.clone_current();
@@ -136,6 +135,7 @@ pub fn get_log_level() -> String {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg(feature = "gui")]
 pub fn log(level: &str, message: &str) {
     match level {
         "trace" => tracing::trace!("{}", message),

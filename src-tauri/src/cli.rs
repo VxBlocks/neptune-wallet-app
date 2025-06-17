@@ -6,7 +6,7 @@ use neptune_cash::config_models::{data_directory::DataDirectory, network::Networ
 
 use crate::{
     rpc::{client::RestRpcClient, Output, SendToAddressParams},
-    scan::fake_archival_state::generate_snapshot,
+    wallet::fake_archival_state::generate_snapshot,
 };
 #[derive(Parser)]
 enum WalletCli {

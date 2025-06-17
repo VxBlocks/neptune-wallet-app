@@ -1,5 +1,5 @@
 [workspace]
-members = ["wallet-macros"]
+members = []
 resolver = "2"
 
 [package]
@@ -79,11 +79,9 @@ enum_dispatch = "0.3.13"
 strum = "0.27.1"
 
 [features]
-default = ["custom-protocol", "gui"]
-custom-protocol = ["tauri/custom-protocol"]
+default = ["gui"]
 dev-release = []
 gui = [
-    "wallet-macros/gui",
     "dep:tauri",
     "dep:clipboard-ext",
     "dep:tauri-plugin-single-instance",
@@ -96,3 +94,6 @@ cli = ["dep:dialoguer"]
 
 [patch.crates-io]
 leveldb-sys = { path = "../leveldb-sys" }
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(desktop)"] }

@@ -15,7 +15,3 @@ export async function has_password(): Promise<boolean> {
 export async function try_password(): Promise<boolean> {
     return await invoke('try_password', {})
 }
-
-export async function clean_data(): Promise<boolean> {
-    return await invoke('clean_data', {})
-}

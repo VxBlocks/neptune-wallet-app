@@ -1,9 +1,9 @@
-use os_info::Info;
 #[cfg(target_os = "windows")]
 use os_info::Version::Semantic;
 
 #[cfg_attr(feature = "gui", tauri::command)]
-pub fn os_info() -> Info {
+#[cfg(feature = "gui")]
+pub fn os_info() -> os_info::Info {
     let info = os_info::get();
 
     info
@@ -19,11 +19,13 @@ pub fn os_info() -> Info {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg(feature = "gui")]
 pub fn platform() -> String {
     std::env::consts::OS.to_string()
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg(feature = "gui")]
 pub fn is_win11() -> bool {
     #[cfg(target_os = "windows")]
     {

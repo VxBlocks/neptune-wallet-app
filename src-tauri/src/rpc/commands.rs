@@ -34,6 +34,7 @@ impl<T> TauriCommandResultExt for std::result::Result<T, anyhow::Error> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn set_remote_rest(rest: String) -> Result<()> {
     let config = crate::service::get_state::<Arc<Config>>();
     config.set_remote_rest(&rest).await.into_tauri_result()?;
@@ -43,12 +44,14 @@ pub async fn set_remote_rest(rest: String) -> Result<()> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn get_remote_rest() -> Result<String> {
     let config = crate::service::get_state::<Arc<Config>>();
     Ok(config.get_remote_rest().await.into_tauri_result()?)
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn set_network(network: String) -> Result<()> {
     let network = Network::from_str(&network).map_err(|e| e.to_string())?;
     let config = crate::service::get_state::<Arc<Config>>();
@@ -61,12 +64,14 @@ pub async fn set_network(network: String) -> Result<()> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn get_network() -> Result<String> {
     let config = crate::service::get_state::<Arc<Config>>();
     Ok(config.get_network().await.into_tauri_result()?.to_string())
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn set_disk_cache(enabled: bool) -> Result<()> {
     let config = crate::service::get_state::<Arc<Config>>();
     config.set_disk_cache(enabled).await.into_tauri_result()?;
@@ -74,6 +79,7 @@ pub async fn set_disk_cache(enabled: bool) -> Result<()> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn get_disk_cache() -> Result<bool> {
     let config = crate::service::get_state::<Arc<Config>>();
     Ok(config.get_disk_cache().await.into_tauri_result()?)
@@ -116,6 +122,7 @@ pub async fn add_wallet(
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn remove_wallet(id: i64) -> Result<()> {
     let config = crate::service::get_state::<Arc<Config>>();
     config.remove_wallet(id).await.into_tauri_result()?;
@@ -126,6 +133,7 @@ pub async fn remove_wallet(id: i64) -> Result<()> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn export_wallet(password: String, id: i64) -> Result<Vec<String>> {
     let config = crate::service::get_state::<Arc<Config>>();
     let config_password = config.password.lock().await.clone();
@@ -150,6 +158,7 @@ pub async fn get_wallets() -> Result<Vec<WalletData>> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn get_wallet_id() -> Result<i64> {
     let config = crate::service::get_state::<Arc<Config>>();
     config.get_wallet_id().await.into_tauri_result()
@@ -184,12 +193,14 @@ pub async fn stop_rpc_server() -> Result<()> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn wallet_address(index: u64) -> Result<String> {
     let state = crate::service::get_state::<Arc<SyncState>>();
     Ok(state.wallet.get_address(index).await.into_tauri_result()?)
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn get_server_url() -> Result<String> {
     let token = get_token().await?;
 
@@ -250,6 +261,7 @@ pub async fn start_rpc_server_inner() -> Result<()> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn input_password(password: String) -> Result<()> {
     let config = crate::service::get_state::<Arc<Config>>();
     config
@@ -287,14 +299,7 @@ pub async fn try_password() -> Result<bool> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
-pub async fn clean_data() -> Result<()> {
-    let config = crate::service::get_state::<Arc<Config>>();
-    let data_dir = config.get_data_dir().await.into_tauri_result()?;
-    std::fs::remove_dir_all(data_dir).map_err(|e| e.to_string())?;
-    std::process::exit(0);
-}
-
-#[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn resync_wallet() -> Result<()> {
     let state = crate::service::get_state::<Arc<SyncState>>();
     stop_rpc_server().await?;
@@ -313,6 +318,7 @@ pub async fn resync_wallet() -> Result<()> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn reset_to_height(height: u64) -> Result<()> {
     let state = crate::service::get_state::<Arc<SyncState>>();
     state.reset_to_height(height).await.into_tauri_result()?;
@@ -320,6 +326,7 @@ pub async fn reset_to_height(height: u64) -> Result<()> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn snapshot_dir() -> Result<String> {
     let config = crate::service::get_state::<Arc<Config>>();
     let data_dir = config.get_data_dir().await.into_tauri_result()?;
@@ -328,6 +335,7 @@ pub async fn snapshot_dir() -> Result<String> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn generate_snapshot_file(
     path: String,
     start_height: u64,
@@ -346,6 +354,7 @@ pub async fn generate_snapshot_file(
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn list_cache() -> Result<Vec<BlockCacheFile>> {
     let config = crate::service::get_state::<Arc<Config>>();
     let network = config.get_network().await.into_tauri_result()?;
@@ -364,6 +373,7 @@ pub async fn list_cache() -> Result<Vec<BlockCacheFile>> {
 }
 
 #[cfg_attr(feature = "gui", tauri::command)]
+#[cfg_attr(not(feature = "gui"), allow(unused))]
 pub async fn delete_cache(path: String) -> Result<()> {
     let path = PathBuf::from(path);
     PersistBlockCache::delete_block_file(path)

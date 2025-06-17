@@ -23,7 +23,7 @@ use logger::{clear_logs, get_log_level, get_logs, log, set_log_level};
 use os::{is_win11, os_info, platform};
 #[cfg(feature = "gui")]
 use rpc::commands::{
-    add_wallet, clean_data, delete_cache, export_wallet, generate_snapshot_file, get_disk_cache,
+    add_wallet, delete_cache, export_wallet, generate_snapshot_file, get_disk_cache,
     get_network, get_remote_rest, get_server_url, get_wallet_id, get_wallets, has_password,
     input_password, list_cache, remove_wallet, reset_to_height, resync_wallet, run_rpc_server,
     set_disk_cache, set_network, set_password, set_remote_rest, set_wallet_id, snapshot_dir,
@@ -64,7 +64,6 @@ pub fn add_commands<R: tauri::Runtime>(app: tauri::Builder<R>) -> tauri::Builder
         set_password,
         has_password,
         try_password,
-        clean_data,
         set_log_level,
         get_log_level,
         log,

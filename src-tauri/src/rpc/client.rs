@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::{config, scan::balance::WalletHistory};
+use crate::{config, wallet::balance::WalletHistory};
 
 use super::{SendResponse, SendToAddressParams};
 pub struct RestRpcClient {
