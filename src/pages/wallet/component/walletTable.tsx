@@ -14,8 +14,7 @@ import { useSettingActionData } from "@/store/settings/hooks";
 import { querySyncBlockStatus } from "@/store/sync/sync-slice";
 import ActionMenu from "./action-menu";
 import { deleteContactAddress } from "@/utils/storage";
-import ExportWalletModal from "./export-wallet-modal";
-import { set } from "date-fns";
+import ExportWalletModal from "./export-wallet-modal"; 
 
 export default function WalletTable() {
     const loading = useLoadingWallets()
@@ -64,8 +63,6 @@ export default function WalletTable() {
 
     async function refreshWalletData() {
         try {
-            // await stop_rpc_server();
-            // dispatch(startRunRpcServer())
             setTimeout(() => {
                 dispatch(querySyncBlockStatus({ serverUrl }))
                 dispatch(queryWallets())

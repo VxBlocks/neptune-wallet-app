@@ -29,7 +29,6 @@ export default function ImportCecret({ nextStep }: { nextStep: () => void }) {
                 importData.startHeight || 0,
                 false
             );
-            // await setCurrentWallet(walletID); 
             nextStep()
         } catch (error: any) {
             notifications.show({

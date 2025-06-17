@@ -3,10 +3,8 @@ import { lazy } from "react";
 import AboutPage from "../pages/about";
 import { IconDeviceImacUp, IconHistory, IconLayoutNavbarCollapse, IconSettings, IconTimelineEventText, IconTransfer, IconWallet } from "@tabler/icons-react";
 
-const WalletPage = lazy(async () => await import("../pages/wallet"));
-// const SendPage = lazy(async () => await import("../pages/send"));
-const SettingsPage = lazy(async () => await import("../pages/settings"));
-const AdvancedPage = lazy(async () => await import("../pages/advanced"));
+const WalletPage = lazy(async () => await import("../pages/wallet")); 
+const SettingsPage = lazy(async () => await import("../pages/settings")); 
 const LogPage = lazy(async () => await import("../pages/log"));
 const HistoryPage = lazy(async () => await import("../pages/history"));
 const BatchPage = lazy(async () => await import("../pages/batch"));
@@ -42,9 +40,6 @@ export const routesConfig: RouteObject[] = [
             {
                 path: "settings",
                 element: <SettingsPage />,
-            }, {
-                path: "advanced",
-                element: <AdvancedPage />,
             }, {
                 path: "about",
                 element: <AboutPage />,

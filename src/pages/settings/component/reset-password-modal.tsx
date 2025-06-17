@@ -22,7 +22,6 @@ export default function ResetPasswordModal({ opened, close }: { opened: boolean,
             try {
                 await set_password(oldpassword, password);
                 dispatch(querySettingActionData())
-                // dispatch(reStartRunRpcServer())  
                 notifications.show({
                     position: "top-right",
                     title: "Success",
