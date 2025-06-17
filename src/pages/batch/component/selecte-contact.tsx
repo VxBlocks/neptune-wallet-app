@@ -11,7 +11,7 @@ export default function SelecteContact({ opened, close, selectedContact }: { ope
     const dispatch = useAppDispatch()
     const loading = useLoadingContacts()
     const contracts = useAllContacts()
-    const [selectedRows, setSelectedRows] = useState<string[]>([]);
+    const [selectedRows, setSelectedRows] = useState<number[]>([]);
     useEffect(() => {
         dispatch(queryAllContacts())
     }, [dispatch])
@@ -20,20 +20,20 @@ export default function SelecteContact({ opened, close, selectedContact }: { ope
         setSelectedRows([])
     }, [opened])
 
-    const rows = contracts && contracts.map((element) => (
-        <Table.Tr key={element.address}
-            bg={selectedRows.includes(element.address) ? 'var(--mantine-color-blue-light)' : undefined}
+    const rows = contracts && contracts.map((element, index) => (
+        <Table.Tr key={index}
+            bg={selectedRows.includes(index) ? 'var(--mantine-color-blue-light)' : undefined}
         >
             <Table.Td>
                 <Checkbox
                     aria-label="Select row"
-                    checked={selectedRows.includes(element.address)}
+                    checked={selectedRows.includes(index)}
                     onChange={(event) => {
                         let checked = event.currentTarget.checked
                         if (checked) {
-                            setSelectedRows([element.address])
+                            setSelectedRows([index])
                         } else {
-                            setSelectedRows(selectedRows.filter((position) => position !== element.address))
+                            setSelectedRows(selectedRows.filter((position) => position !== index))
                         }
                     }
                     }
@@ -87,7 +87,8 @@ export default function SelecteContact({ opened, close, selectedContact }: { ope
 
             </Box>
             <Button variant={"light"} fullWidth disabled={selectedRows.length <= 0} onClick={() => {
-                selectedContact(selectedRows[0])
+                let index = selectedRows[0]
+                selectedContact(contracts && contracts.length > 0 ? contracts[index].address : "")
             }}>Confirm</Button>
         </Flex>
     </Modal>)
