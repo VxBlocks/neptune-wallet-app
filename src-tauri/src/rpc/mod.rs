@@ -157,7 +157,7 @@ async fn log_middleware(
 ) -> Result<Response, StatusCode> {
     let path = request.uri().path().to_string();
     match path.as_str() {
-        "/rpc/scan/state" | "/rpc/scan/stop" | "/rpc/wallet/status" => {}
+        "/rpc/scan/state" | "/rpc/block/tip_height" => {}
         _ => {
             info!(
                 "Received '{} {}' from '{addr}'",
