@@ -1,0 +1,40 @@
+{
+  "build": {
+    "beforeDevCommand": "yarn dev",
+    "beforeBuildCommand": "yarn build",
+    "frontendDist": "../build",
+    "devUrl": "http://localhost:3000"
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Finance",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "10.15.0"
+    },
+    "externalBin": [],
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
+  },
+  "productName": "NeptuneWallet",
+  "mainBinaryName": "NeptuneWallet",
+  "identifier": "ai.vxb.neptune.wallet",
+  "plugins": {},
+  "app": {
+    "withGlobalTauri": false,
+    "security": {
+      "csp": null
+    },
+    "macOSPrivateApi": true
+  }
+}

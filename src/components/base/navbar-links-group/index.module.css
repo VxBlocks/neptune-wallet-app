@@ -1,0 +1,111 @@
+.control {
+    font-weight: 500;
+    display: block;
+    width: 100%;
+    padding: var(--mantine-spacing-xs) 24px;
+    color: var(--navbarcolor);
+    font-weight: 500;
+    margin: 15px 0px;
+
+    &:hover {
+        background-color: var(--navbarhovercolor);
+        color: var(--navbaractivecolor);
+        background: linear-gradient(
+                to right,
+                white 3px,
+                transparent 3px
+            );
+        background-repeat: no-repeat;
+        background-size: 3px 70%;
+        background-position: left center;
+        animation: lineGrow 0.3s ease-out forwards;
+    }
+
+    &[data-active] {
+
+        &,
+        &:hover {
+            background-color: var(--navbarhovercolor);
+            color: var(--navbaractivecolor);
+            background: linear-gradient(
+                    to right,
+                    white 3px,
+                    transparent 3px
+                );
+            background-repeat: no-repeat;
+            background-size: 3px 70%;
+            background-position: left center;
+            animation: lineGrow 0.3s ease-out forwards;
+        }
+    }
+}
+
+@keyframes lineGrow {
+    0% {
+        background-size: 3px 0%;
+    }
+    100% {
+        background-size: 3px 70%;
+    }
+}
+
+.linkscontrol {
+    font-weight: 500;
+    display: block;
+    width: 100%;
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-xs);
+    color: var(--navbarcolor);
+    font-size: var(--mantine-font-size-sm);
+
+    &:hover {
+        /* background-color: light-dark(var(--mantine-color-gray-0), var(--mantine-color-dark-7)); */
+        color: var(--navbaractivecolor);
+    }
+
+    &[data-active] {
+
+        &,
+        &:hover {
+            color: var(--navbaractivecolor);
+        }
+    }
+}
+
+.link {
+    font-weight: 500;
+    display: block;
+    text-decoration: none;
+    padding: var(--mantine-spacing-xs) var(--mantine-spacing-md);
+    padding-left: var(--mantine-spacing-md);
+    margin-left: var(--mantine-spacing-xl);
+    font-size: var(--mantine-font-size-sm);
+    color: white;
+    border-left: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+
+    &:hover {
+        background-color: var(--navbarhovercolor);
+        color: var(--navbaractivecolor);
+    }
+
+    &[data-active] {
+
+        &,
+        &:hover {
+            background-color: var(--navbarhovercolor);
+            color: var(--navbaractivecolor);
+        }
+    }
+}
+
+.chevron {
+    color: var(--navbaracolor);
+    transition: transform 200ms ease;
+    display: none;
+
+    &[data-active] {
+        &,
+        &:hover {
+            color: var(--navbaractivecolor);
+        }
+    }
+}

@@ -1,0 +1,14 @@
+# tokio_unstable compile flag is necessary for tokio-console usage.
+# see: https://docs.rs/console-subscriber/latest/console_subscriber/
+# [build]
+# rustflags = ["--cfg", "tokio_unstable"]
+
+# [unstable]
+# profile-rustflags = true
+
+[env]
+# workaround for rustc 1.80 running out of stack space when building triton-vm
+RUST_MIN_STACK="33554432"
+# so that anyhow errors automatically display stack trace
+RUST_BACKTRACE="1"
+

@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f7faff;
+  --foreground: #171717;
+  --navbarbackground: #141432;
+  --navbarhovercolor: #202038;
+  --navbarcolor: #b5b6c9;
+  --navbaractivecolor: #ffffff;
+  --synccardbackground: #141432;
+  --synccardbordecolor: var(--synccardbackground);
+  --balancebackground: #6972ff;
+  --lockbalancebackground: #f7b847;
+  --primaryhighlight: #6972ff;
+  --primaryhighlight2: #fab347;
+  --primaryhighlight3: #e8533c;
+  --body-radius: 13px;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  overflow: hidden;
+}
+
+.main {
+  background: var(--navbarbackground);
+  height: 100vh;
+}
+
+.main-content {
+  background: var(--background);
+  border-radius: var(--body-radius) 0 0 var(--body-radius);
+  height: 100vh;
+}
