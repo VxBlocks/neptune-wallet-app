@@ -33,6 +33,7 @@ clipboard-ext = { version = "0.2.0", optional = true }
 tauri-plugin-single-instance = { version = "2", optional = true }
 tauri-plugin-shell = { version = "2", optional = true }
 tauri-plugin-dialog = { version = "2", optional = true }
+tauri-plugin-opener = { version = "2", optional = true }
 
 anyhow = { version = "1.0", features = ["backtrace"] }
 tokio = { version = "1.44.1", features = ["full", "tracing"] }
@@ -71,7 +72,6 @@ dialoguer = { version = "0.11.0", optional = true }
 once_cell = "1.21.3"
 rayon = "1.10.0"
 dashmap = "6.1.0"
-tauri-plugin-opener = "2"
 zstd = "0.13.3"
 openssl-sys = { version = "0.9.106", features = ["vendored"] }
 thiserror = "2.0.12"
@@ -87,6 +87,7 @@ gui = [
     "dep:tauri-plugin-single-instance",
     "dep:tauri-plugin-shell",
     "dep:tauri-plugin-dialog",
+    "dep:tauri-plugin-opener",
     "dep:tauri-build",
 ]
 
