@@ -4,6 +4,8 @@ vxb neptune wallet is a cross-platform wallet for [neptunecash](https://github.c
 
 ## development
 
+Refer to [neptune-wallet-core](https://github.com/VxBlocks/neptune-wallet-core) for server side source code. or read [self hosted server](#self-hosted-server) to run self hosted server.
+
 ### prerequisites
 
 1. System Dependencies
@@ -16,7 +18,7 @@ vxb neptune wallet is a cross-platform wallet for [neptunecash](https://github.c
 
 ### dependencies
 
-refer to [tauri](https://tauri.app/start/prerequisites)
+Refer to [tauri](https://tauri.app/start/prerequisites)
 
 ### project structure
 
@@ -38,7 +40,7 @@ refer to [tauri](https://tauri.app/start/prerequisites)
 
 Install [Go Task](https://taskfile.dev/)
 
-refer to [taskfile](./taskfile.yml)
+Refer to [taskfile](./taskfile.yml)
 
 ```bash
 task build
@@ -47,3 +49,17 @@ task build
 NOTE: windows version can only be built on linux with cargo-xwin.
 
 NOTE: android version can be compiled now, but the frontend is not ready, you can only use android app on tablet or landscape mode.
+
+### self hosted server
+
+The wallet use a patched version of `neptune-core` to support rest api.
+
+To run a self hosted server, you need to:
+
+```bash
+git clone https://github.com/VxBlocks/neptune-wallet-core -b wallet
+cd neptune-wallet-core
+cargo run --release -- --rest-port 9800
+```
+
+Then you can set your server url in the wallet settings.
