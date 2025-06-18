@@ -99,20 +99,13 @@ pub fn run() {
     tauri::async_runtime::spawn(async {
         match tokio::signal::ctrl_c().await {
             Ok(()) => {
-                println!("Received shutdown signal");
-                let app = crate::service::get_state::<tauri::AppHandle>();
-                if let Err(e) = stop_rpc_server().await {
-                    crate::service::app::error_dialog(
-                        &app,
-                        &format!("Failed to stop rpc server {}", &e.to_string()),
-                    );
-                }
-                println!("flushed wallet");
+                async_before_exit().await;
                 std::process::exit(0)
             }
             Err(err) => {
                 eprintln!("Unable to listen for shutdown signal: {}", err);
                 // we also shut down in case of error
+                std::process::exit(1)
             }
         }
     });
@@ -124,8 +117,26 @@ pub fn run() {
             let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             api.prevent_exit();
         }
+        tauri::RunEvent::Exit => before_exit(),
         _ => {}
     })
+}
+
+fn before_exit() {
+    tauri::async_runtime::block_on(async_before_exit());
+}
+
+async fn async_before_exit() {
+    println!("Received shutdown signal");
+    let app = crate::service::get_state::<tauri::AppHandle>();
+    if let Err(e) = stop_rpc_server().await {
+        crate::service::app::error_dialog(
+            &app,
+            &format!("Failed to stop rpc server {}", &e.to_string()),
+        );
+    }
+
+    println!("gracefully shutdown");
 }
 
 #[cfg(desktop)]
@@ -213,16 +224,7 @@ fn build_tray_menu(app: &mut App) -> anyhow::Result<()> {
                 toggle_window_visibility(app);
             }
             MENU_ITEM_QUIT => {
-                println!("system tray received quit");
-                tauri::async_runtime::block_on(async {
-                    if let Err(e) = stop_rpc_server().await {
-                        crate::service::app::error_dialog(
-                            app,
-                            &format!("Failed to stop rpc server {}", &e.to_string()),
-                        );
-                    }
-                });
-
+                before_exit();
                 std::process::exit(0);
             }
             MENUITEM_COPY_ADDR => tauri::async_runtime::block_on(async {
