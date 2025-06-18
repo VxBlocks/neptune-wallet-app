@@ -34,7 +34,7 @@ Refer to [tauri](https://tauri.app/start/prerequisites)
   - `session_store` session store for frontend
   - `cli` cli entrypoint
   - `gui` gui entrypoint
-- `leveldb-sys` leveldb without compile c code since we dont use it
+- `leveldb-sys` leveldb stub since we dont use it and it is not compatible with cargo-xwin
 
 ### build
 
