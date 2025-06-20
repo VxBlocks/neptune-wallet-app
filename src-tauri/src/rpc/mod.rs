@@ -22,7 +22,6 @@ use neptune_cash::models::{
 };
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     sync::Arc,
@@ -39,7 +38,11 @@ use transaction_status::{forget_tx, get_pending_transaction};
 use crate::{
     config::{consts::RPC_PORT, Config},
     service::get_state,
-    wallet::{sync::SyncState, InputSelectionRule},
+    wallet::{
+        balance::WalletHistory,
+        sync::{SyncState, SyncStatus},
+        InputSelectionRule,
+    },
 };
 // mod middleware;
 mod block;
@@ -83,6 +86,107 @@ impl RpcHandler {
 
     pub fn is_finished(&self) -> bool {
         self.handler.is_finished()
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct WalletBalance {
+    pub available_balance: String,
+    pub total_balance: String,
+}
+
+pub struct WalletRpcImpl;
+impl WalletRpc for WalletRpcImpl {}
+
+//TODO: move to crate::command
+pub trait WalletRpc {
+    async fn sync_state() -> SyncStatus {
+        crate::service::get_state::<Arc<SyncState>>().status().await
+    }
+
+    async fn wallet_balance() -> Result<WalletBalance, RestError> {
+        let wallet = &get_state::<Arc<SyncState>>().wallet;
+        let (available_balance, total_balance) = wallet.get_all_balance().await?;
+        Ok(WalletBalance {
+            available_balance: available_balance.display_lossless(),
+            total_balance: total_balance.display_lossless(),
+        })
+    }
+    async fn wallet_address(index: u64) -> Result<String, RestError> {
+        let wallet = &get_state::<Arc<SyncState>>().wallet;
+        let address = wallet.get_address(index).await?;
+        Ok(address)
+    }
+    async fn history() -> Result<Vec<WalletHistory>, RestError> {
+        let wallet = &get_state::<Arc<SyncState>>().wallet;
+        let history = wallet.get_balance_history().await?;
+        Ok(history)
+    }
+    async fn avaliable_utxos() -> Result<Vec<Utxo>, RestError> {
+        let wallet = &get_state::<Arc<SyncState>>().wallet;
+        let mut utxos = wallet.get_unspent_utxos().await?;
+        utxos.sort_by_key(|v| v.recovery_data.utxo.get_native_currency_amount());
+        let now = Timestamp::now();
+        let utxos = utxos
+            .into_iter()
+            .map(|v| Utxo {
+                id: v.id,
+                hash: v.hash,
+                confirm_timestamp: v.confirmed_in_block.timestamp,
+                confirm_height: v.confirm_height,
+                confirmed_txid: v.confirmed_txid,
+                amount: v
+                    .recovery_data
+                    .utxo
+                    .get_native_currency_amount()
+                    .display_lossless(),
+                locked: match v.recovery_data.utxo.release_date() {
+                    Some(v) => v > now,
+                    None => false,
+                },
+            })
+            .collect::<Vec<_>>();
+        Ok(utxos)
+    }
+    async fn send_to_address(params: SendToAddressParams) -> Result<SendResponse, RestError> {
+        let mut outputs = Vec::with_capacity(params.outputs.len());
+
+        let wallet = &get_state::<Arc<SyncState>>().wallet;
+        for output in params.outputs {
+            let address = ReceivingAddress::from_bech32m(&output.address, wallet.network)?;
+            let amount = NativeCurrencyAmount::coins_from_str(&output.amount)?;
+            outputs.push((address, amount));
+        }
+
+        let utxo_notification_media = (
+            UtxoNotificationMedium::OnChain,
+            UtxoNotificationMedium::OnChain,
+        );
+
+        let fee = NativeCurrencyAmount::coins_from_str(&params.fee)?;
+
+        let rule = if let Some(input_rule) = params.input_rule {
+            InputSelectionRule::from_str(&input_rule).unwrap_or_default()
+        } else {
+            InputSelectionRule::default()
+        };
+
+        let tx = wallet
+            .send_to_address(outputs, utxo_notification_media, fee, rule, params.inputs)
+            .await
+            .map_err(|e| anyhow!("{}", e))?;
+
+        info!("proven tx {}", tx.kernel.txid());
+
+        Ok(SendResponse {
+            txid: tx.kernel.txid().to_string(),
+            outputs: tx
+                .kernel
+                .outputs
+                .iter()
+                .map(|v| v.canonical_commitment.to_hex())
+                .collect::<Vec<_>>(),
+        })
     }
 }
 
@@ -216,30 +320,21 @@ async fn scan_blocks(Path((_start, end)): Path<(u64, u64)>) -> Result<ErasedJson
 }
 
 async fn sync_state() -> Result<ErasedJson, RestError> {
-    let sync_state = crate::service::get_state::<Arc<SyncState>>().status().await;
-
-    Ok(ErasedJson::pretty(sync_state))
+    Ok(ErasedJson::pretty(WalletRpcImpl::sync_state().await))
 }
 
 async fn wallet_balance() -> Result<ErasedJson, RestError> {
-    let wallet = &get_state::<Arc<SyncState>>().wallet;
-    let (available_balance, total_balance) = wallet.get_all_balance().await?;
-    Ok(ErasedJson::pretty(json!({
-        "available_balance": available_balance.display_lossless(),
-        "total_balance": total_balance.display_lossless(),
-    })))
+    Ok(ErasedJson::pretty(WalletRpcImpl::wallet_balance().await?))
 }
 
 async fn wallet_address(Path(index): Path<u64>) -> Result<ErasedJson, RestError> {
-    let wallet = &get_state::<Arc<SyncState>>().wallet;
-    let address = wallet.get_address(index).await?;
-    Ok(ErasedJson::pretty(address))
+    Ok(ErasedJson::pretty(
+        WalletRpcImpl::wallet_address(index).await?,
+    ))
 }
 
 async fn history() -> Result<ErasedJson, RestError> {
-    let wallet = &get_state::<Arc<SyncState>>().wallet;
-    let history = wallet.get_balance_history().await?;
-    Ok(ErasedJson::pretty(history))
+    Ok(ErasedJson::pretty(WalletRpcImpl::history().await?))
 }
 
 #[derive(Serialize, Deserialize)]
@@ -264,44 +359,9 @@ pub struct SendResponse {
 }
 
 async fn send_to_address(Json(params): Json<SendToAddressParams>) -> Result<ErasedJson, RestError> {
-    let mut outputs = Vec::with_capacity(params.outputs.len());
-
-    let wallet = &get_state::<Arc<SyncState>>().wallet;
-    for output in params.outputs {
-        let address = ReceivingAddress::from_bech32m(&output.address, wallet.network)?;
-        let amount = NativeCurrencyAmount::coins_from_str(&output.amount)?;
-        outputs.push((address, amount));
-    }
-
-    let utxo_notification_media = (
-        UtxoNotificationMedium::OnChain,
-        UtxoNotificationMedium::OnChain,
-    );
-
-    let fee = NativeCurrencyAmount::coins_from_str(&params.fee)?;
-
-    let rule = if let Some(input_rule) = params.input_rule {
-        InputSelectionRule::from_str(&input_rule).unwrap_or_default()
-    } else {
-        InputSelectionRule::default()
-    };
-
-    let tx = wallet
-        .send_to_address(outputs, utxo_notification_media, fee, rule, params.inputs)
-        .await
-        .map_err(|e| anyhow!("{}", e))?;
-
-    info!("proven tx {}", tx.kernel.txid());
-
-    Ok(ErasedJson::pretty(SendResponse {
-        txid: tx.kernel.txid().to_string(),
-        outputs: tx
-            .kernel
-            .outputs
-            .iter()
-            .map(|v| v.canonical_commitment.to_hex())
-            .collect::<Vec<_>>(),
-    }))
+    Ok(ErasedJson::pretty(
+        WalletRpcImpl::send_to_address(params).await?,
+    ))
 }
 
 #[derive(Serialize)]
@@ -317,28 +377,5 @@ struct Utxo {
 }
 
 async fn avaliable_utxos() -> Result<ErasedJson, RestError> {
-    let wallet = &get_state::<Arc<SyncState>>().wallet;
-    let mut utxos = wallet.get_unspent_utxos().await?;
-    utxos.sort_by_key(|v| v.recovery_data.utxo.get_native_currency_amount());
-    let now = Timestamp::now();
-    let utxos = utxos
-        .into_iter()
-        .map(|v| Utxo {
-            id: v.id,
-            hash: v.hash,
-            confirm_timestamp: v.confirmed_in_block.timestamp,
-            confirm_height: v.confirm_height,
-            confirmed_txid: v.confirmed_txid,
-            amount: v
-                .recovery_data
-                .utxo
-                .get_native_currency_amount()
-                .display_lossless(),
-            locked: match v.recovery_data.utxo.release_date() {
-                Some(v) => v > now,
-                None => false,
-            },
-        })
-        .collect::<Vec<_>>();
-    Ok(ErasedJson::pretty(utxos))
+    Ok(ErasedJson::pretty(WalletRpcImpl::avaliable_utxos().await?))
 }
