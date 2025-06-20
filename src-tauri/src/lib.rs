@@ -5,6 +5,7 @@
 
 #[cfg(not(feature = "gui"))]
 mod cli;
+mod command;
 mod config;
 #[cfg(feature = "gui")]
 mod gui;
@@ -12,22 +13,27 @@ mod logger;
 mod os;
 mod rpc;
 mod rpc_client;
-pub mod wallet;
 mod service;
 #[cfg(feature = "gui")]
 mod session_store;
+pub mod wallet;
 
+#[cfg(feature = "gui")]
+use command::commands::{
+    add_wallet, delete_cache, export_wallet, generate_snapshot_file, get_disk_cache, get_network,
+    get_remote_rest, get_wallet_id, get_wallets, has_password, input_password, list_cache,
+    remove_wallet, reset_to_height, set_disk_cache, set_network, set_password, set_remote_rest,
+    set_wallet_id, snapshot_dir, try_password, wallet_address,
+};
 #[cfg(feature = "gui")]
 use logger::{clear_logs, get_log_level, get_logs, log, set_log_level};
 #[cfg(feature = "gui")]
 use os::{is_win11, os_info, platform};
 #[cfg(feature = "gui")]
 use rpc::commands::{
-    add_wallet, delete_cache, export_wallet, generate_snapshot_file, get_disk_cache,
-    get_network, get_remote_rest, get_server_url, get_wallet_id, get_wallets, has_password,
-    input_password, list_cache, remove_wallet, reset_to_height, resync_wallet, run_rpc_server,
-    set_disk_cache, set_network, set_password, set_remote_rest, set_wallet_id, snapshot_dir,
-    stop_rpc_server, try_password, wallet_address,
+    avaliable_utxos, current_wallet_address, forget_tx, get_server_url, get_tip_height, history,
+    pending_transactions, run_rpc_server, send_to_address, stop_rpc_server, sync_state,
+    wallet_balance,
 };
 #[cfg(feature = "gui")]
 use service::app::{get_build_info, update_info};
@@ -40,6 +46,7 @@ use session_store::command::{
 #[cfg(feature = "gui")]
 pub fn add_commands<R: tauri::Runtime>(app: tauri::Builder<R>) -> tauri::Builder<R> {
     app.invoke_handler(tauri::generate_handler![
+        // myhandler,
         get_logs,
         clear_logs,
         is_win11,
@@ -67,7 +74,6 @@ pub fn add_commands<R: tauri::Runtime>(app: tauri::Builder<R>) -> tauri::Builder
         set_log_level,
         get_log_level,
         log,
-        resync_wallet,
         session_store_get,
         session_store_set,
         session_store_del,
@@ -80,6 +86,15 @@ pub fn add_commands<R: tauri::Runtime>(app: tauri::Builder<R>) -> tauri::Builder
         reset_to_height,
         list_cache,
         delete_cache,
+        sync_state,
+        wallet_balance,
+        current_wallet_address,
+        history,
+        avaliable_utxos,
+        send_to_address,
+        pending_transactions,
+        forget_tx,
+        get_tip_height,
     ])
 }
 

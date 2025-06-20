@@ -8,13 +8,13 @@ use axum_extra::response::ErasedJson;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
-struct TransactionStatus {
+pub struct TransactionStatus {
     tx_id: String,
     status: TransactionStatusEnum,
 }
 
 #[derive(Debug, Serialize)]
-enum TransactionStatusEnum {
+pub enum TransactionStatusEnum {
     Pending,
     // Proving,
     // Composing,

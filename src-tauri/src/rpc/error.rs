@@ -20,3 +20,9 @@ impl From<anyhow::Error> for RestError {
         Self(err.to_string())
     }
 }
+
+impl Into<String> for RestError {
+    fn into(self) -> String {
+        self.0
+    }
+}

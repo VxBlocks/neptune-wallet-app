@@ -112,7 +112,7 @@ pub trait WalletRpc {
             total_balance: total_balance.display_lossless(),
         })
     }
-    async fn wallet_address(index: u64) -> Result<String, RestError> {
+    async fn current_wallet_address(index: u64) -> Result<String, RestError> {
         let wallet = &get_state::<Arc<SyncState>>().wallet;
         let address = wallet.get_address(index).await?;
         Ok(address)
@@ -329,7 +329,7 @@ async fn wallet_balance() -> Result<ErasedJson, RestError> {
 
 async fn wallet_address(Path(index): Path<u64>) -> Result<ErasedJson, RestError> {
     Ok(ErasedJson::pretty(
-        WalletRpcImpl::wallet_address(index).await?,
+        WalletRpcImpl::current_wallet_address(index).await?,
     ))
 }
 
@@ -365,7 +365,7 @@ async fn send_to_address(Json(params): Json<SendToAddressParams>) -> Result<Eras
 }
 
 #[derive(Serialize)]
-struct Utxo {
+pub struct Utxo {
     pub id: i64,
     pub hash: String,
     pub confirm_timestamp: Timestamp,
