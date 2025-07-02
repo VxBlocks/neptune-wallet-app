@@ -592,7 +592,7 @@ impl WalletState {
             .execute(&mut *tx)
             .await?;
 
-        sqlx::query("UPDATE wallet_state_utxos SET spent_height = 0, spent_txid = NULL WHERE confirm_height > ?")
+        sqlx::query("UPDATE wallet_state_utxos SET spent_height = NULL, spent_txid = NULL, spent_in_block = NULL WHERE spent_height > ?")
             .bind(&height_i64)
             .execute(&mut *tx)
             .await?;
