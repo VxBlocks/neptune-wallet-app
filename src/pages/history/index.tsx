@@ -1,30 +1,34 @@
 import WithTitlePageHeader from "@/components/header/withTitlePageHeader";
 import { useState } from "react";
-import { Flex, NumberFormatter, SegmentedControl, Space, Text } from "@mantine/core";
+import { SegmentedControl, Space } from "@mantine/core";
 import NewUtxoTable from "./component/new-utxo-table";
 import ActivityTableCard from "./component/activity-table-card";
 import { useActivityPerDay } from "@/store/history/hooks";
-import { amount_to_positive_fixed } from "@/utils/math-util";
+import { BarChart } from '@mantine/charts';
 
 export default function HistoryPage() {
     const [section, setSection] = useState('activity');
     const perDay = useActivityPerDay();
 
     return (<WithTitlePageHeader title="History">
-        {perDay && perDay.length > 0 && <Flex direction={"column"} gap={8}>
-            {
-                perDay.map((day, index) => {
-                    return <Flex key={index} direction={"row"} gap={8}>
-                        <Text>Receive: </Text>
-                        <Text c={"green"}> <NumberFormatter value={amount_to_positive_fixed(day.r_total.toString())} thousandSeparator /></Text>
-                        <Text>Send: </Text>
-                        <Text c={"red"}>  <NumberFormatter value={amount_to_positive_fixed(day.s_total.toString())} thousandSeparator /></Text>
-                        <Text> Height: ({day.start_height.toLocaleString()} - {day.end_height.toLocaleString()})</Text>
-                        <Text> {day.data}</Text>
-                    </Flex>
-                })
-            }
-        </Flex>}
+        {
+            perDay && perDay.length > 0 && <BarChart
+                h={400}
+                data={perDay}
+                yAxisProps={{ domain: [0, 'auto'] }}
+                dataKey="data"
+                withTooltip={false}
+                valueFormatter={(value) => new Intl.NumberFormat('en-US').format(Math.floor(value))}
+                withBarValueLabel
+                valueLabelProps={{ fill: 'teal' }}
+                withLegend
+                legendProps={{ verticalAlign: 'bottom'}}
+                series={[
+                    { name: 'Received', color: 'violet.6' },
+                    { name: 'Spent', color: 'teal.6' },
+                ]}
+            />
+        }
         <SegmentedControl
             value={section}
             onChange={(value: any) => setSection(value)}

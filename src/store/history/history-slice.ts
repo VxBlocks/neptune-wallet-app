@@ -99,8 +99,8 @@ function getTotalPerDay(activitys: MerageHistory[]) {
         perDay.push({
             start_height: 0,
             end_height: 0,
-            r_total: 0,
-            s_total: 0,
+            Received: 0,
+            Spent: 0,
             timestamp: timestamp - i * 24 * 60 * 60 * 1000,
             data: i === 0 ? "Today" : new Date(timestamp - i * 24 * 60 * 60 * 1000).toLocaleDateString()
         })
@@ -111,9 +111,9 @@ function getTotalPerDay(activitys: MerageHistory[]) {
         for (let i = 0; i < perDay.length; i++) {
             if (new Date(activity.timestamp).toLocaleDateString() === new Date(perDay[i].timestamp).toLocaleDateString()) {
                 if (activity.changeAmount.startsWith("-")) {
-                    perDay[i].s_total = bigNumberPlusToString(perDay[i].s_total, activity.changeAmount.substring(2));
+                    perDay[i].Spent = bigNumberPlusToString(perDay[i].Spent, activity.changeAmount.substring(2));
                 } else {
-                    perDay[i].r_total = bigNumberPlusToString(perDay[i].r_total, activity.changeAmount.substring(2));
+                    perDay[i].Received = bigNumberPlusToString(perDay[i].Received, activity.changeAmount.substring(2));
                 }
                 if (activity.height < perDay[i].start_height || perDay[i].start_height === 0) {
                     perDay[i].start_height = activity.height;
