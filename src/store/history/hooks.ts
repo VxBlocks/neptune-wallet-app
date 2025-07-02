@@ -7,6 +7,10 @@ export const useActivityTransactions = () => {
     return useAppSelector(state => state.history.activityHistory);
 }
 
+export const useActivityPerDay = () => {
+    return useAppSelector(state => state.history.perDay);
+}
+
 export const useInExecutionTx = () => {
     return useAppSelector(state => state.history.inExecutionTx);
 }

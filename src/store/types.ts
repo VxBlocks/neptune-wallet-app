@@ -44,6 +44,7 @@ export interface BuildInfo {
 export interface HistoryState {
     loadingActivityHistory: boolean;
     activityHistory: MerageHistory[];
+    perDay: DayHistory[];
     loadingAvailableUtxos: boolean;
     availableUtxos: UtxoItem[];
     inExecutionTx: Transaction | null;
@@ -97,6 +98,13 @@ export interface MerageHistory {
     outputs: string[],
     batchOutput?: SendInputItem[],
     utxos: HistoryUtxo[]
+}
+
+export interface DayHistory {
+    r_total: number,
+    s_total: number,
+    timestamp: number,
+    data: string,
 }
 
 

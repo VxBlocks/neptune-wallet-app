@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { HistoryState, HistoryUtxo, MerageHistory, UtxoItem } from "../types";
+import { DayHistory, HistoryState, HistoryUtxo, MerageHistory, UtxoItem } from "../types";
 import { requestActivityTransactions, requestAvailableUtxos } from "@/utils/api/apis";
 import { ExecutionHistory } from "@/database/types/localhistory";
 import { HistoryData } from "@/utils/api/types";
@@ -10,6 +10,7 @@ import { getExecutionHistory } from "@/utils/storage";
 const initialState: HistoryState = {
     loadingActivityHistory: false,
     activityHistory: [],
+    perDay: [],
     inExecutionTx: null,
     loadingAvailableUtxos: false,
     availableUtxos: []
@@ -29,6 +30,7 @@ const historySlice = createSlice({
         builder.addCase(queryActivityHistory.fulfilled, (state, action) => {
             state.loadingActivityHistory = false;
             state.activityHistory = action.payload.data;
+            state.perDay = action.payload.perDay;
         });
 
         builder.addCase(queryAvailableUtxosList.pending, (state) => {
@@ -69,7 +71,7 @@ export const queryAvailableUtxosList = createAsyncThunk<
 
 
 export const queryActivityHistory = createAsyncThunk<
-    { data: MerageHistory[] },
+    { data: MerageHistory[] , perDay: DayHistory[] },
     { serverUrl: string, addressId: number, historyType?: string }
 >(
     '/api/history/queryActivityHistory',
@@ -80,11 +82,49 @@ export const queryActivityHistory = createAsyncThunk<
         if (merageHistorys && merageHistorys.length > 0) {
             merageHistorys.sort((a, b) => b.timestamp - a.timestamp);
         }
+        let perDay = getTotalPerDay(merageHistorys);
         return {
-            data: merageHistorys
+            data: merageHistorys,
+            perDay
         }
     }
 )
+
+
+function getTotalPerDay(activitys: MerageHistory[]) {
+    let timestamp = new Date().getTime();
+    let perDay = [] as DayHistory[];
+    perDay.push({
+        r_total: 0,
+        s_total: 0,
+        timestamp: timestamp,
+        data: new Date(timestamp).toLocaleString()
+    })
+    perDay.push({
+        r_total: 0,
+        s_total: 0,
+        timestamp: timestamp - 24 * 60 * 60 * 1000,
+        data: new Date(timestamp - 24 * 60 * 60 * 1000).toLocaleDateString()
+    })
+    
+    activitys.forEach(activity => {
+        if (new Date(activity.timestamp).toLocaleDateString() === new Date(perDay[0].timestamp).toLocaleDateString()) {
+            if (activity.changeAmount.startsWith("-")){
+                perDay[0].s_total = bigNumberPlusToString(perDay[0].s_total, activity.changeAmount.substring(2));
+            } else {
+                perDay[0].r_total = bigNumberPlusToString(perDay[0].r_total, activity.changeAmount.substring(2));
+            }
+        }
+        if (new Date(activity.timestamp).toLocaleDateString() === new Date(perDay[1].timestamp).toLocaleDateString()) {
+            if (activity.changeAmount.startsWith("-")){
+                perDay[1].s_total = bigNumberPlusToString(perDay[1].s_total, activity.changeAmount.substring(2));
+            } else {
+                perDay[1].r_total = bigNumberPlusToString(perDay[1].r_total, activity.changeAmount.substring(2));
+            }
+        }
+    });
+    return perDay;
+}
 
 async function handleTransaction(data: HistoryData[], addressId: number, historyType: string) {
     let merageHistorys = [] as MerageHistory[];
@@ -105,7 +145,7 @@ async function handleTransaction(data: HistoryData[], addressId: number, history
                 hasHeight.txid = element.txid
             }
         } else {
-            newQueryHistory.push(element);
+            newQueryHistory.push({...element});
         }
     });
     newQueryHistory && newQueryHistory.forEach(element => {
