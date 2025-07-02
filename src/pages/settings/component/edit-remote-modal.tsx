@@ -1,7 +1,7 @@
 import { set_rest_url } from "@/commands/config";
 import { useAppDispatch } from "@/store/hooks";
 import { querySettingActionData } from "@/store/settings/settings-slice";
-import { Button, Flex, Modal, TextInput } from "@mantine/core";
+import { Button, Flex, FocusTrap, Modal, TextInput } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useEffect, useState } from "react";
 
@@ -14,12 +14,12 @@ export default function EditRemoteModal({ opened, value, close }: { opened: bool
 
     function isValidUrl(urlString: string) {
         const pattern = new RegExp(
-            '^(https?:\\/\\/)?' + 
-            '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + 
-            '((\\d{1,3}\\.){3}\\d{1,3}))' + 
-            '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + 
-            '(\\?[;&a-z\\d%_.~+=-]*)?' + 
-            '(\\#[-a-z\\d_]*)?$', 'i' 
+            '^(https?:\\/\\/)?' +
+            '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' +
+            '((\\d{1,3}\\.){3}\\d{1,3}))' +
+            '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' +
+            '(\\?[;&a-z\\d%_.~+=-]*)?' +
+            '(\\#[-a-z\\d_]*)?$', 'i'
         );
         return pattern.test(urlString);
     }
@@ -51,6 +51,7 @@ export default function EditRemoteModal({ opened, value, close }: { opened: bool
 
     }
     return (<Modal opened={opened} onClose={close} title="Update Remote Rest" centered>
+        <FocusTrap.InitialFocus />
         <Flex direction="column" gap={16}>
             <TextInput
                 label="Remote Rest"
@@ -58,7 +59,12 @@ export default function EditRemoteModal({ opened, value, close }: { opened: bool
                 value={newValue}
                 onChange={(e) => setNewValue(e.target.value.trim())}
             />
-            <Button variant={"light"} disabled={!newValue} onClick={handleUpdate}>Update</Button>
+            <Flex direction={"row"} justify={"space-between"}>
+                <Button variant="default" w={"40%"} onClick={() => {
+                    setNewValue("https://nptwallet.vxb.ai")
+                }}>Restore default</Button>
+                <Button variant={"light"} w={"40%"} disabled={!newValue} onClick={handleUpdate}>Update</Button>
+            </Flex>
         </Flex>
     </Modal>)
 }
