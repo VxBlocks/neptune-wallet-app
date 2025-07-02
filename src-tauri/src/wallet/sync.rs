@@ -322,6 +322,7 @@ impl SyncState {
                 .await
                 .context("reset to height error")?;
             self.height.store(fork + 1, Ordering::Relaxed);
+            return Ok(None);
         }
 
         debug!(
