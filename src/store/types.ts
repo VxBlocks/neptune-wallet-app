@@ -101,6 +101,8 @@ export interface MerageHistory {
 }
 
 export interface DayHistory {
+    start_height: number,
+    end_height: number,
     r_total: number,
     s_total: number,
     timestamp: number,
