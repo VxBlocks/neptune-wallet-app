@@ -2,6 +2,10 @@
 
 vxb neptune wallet is a cross-platform wallet for [neptunecash](https://github.com/Neptune-Crypto/neptune-core).
 
+## download
+
+You can get compiled installer and docs here: <https://github.com/VxBlocks/vxb_neptune_wallet>
+
 ## development
 
 Refer to [neptune-wallet-core](https://github.com/VxBlocks/neptune-wallet-core) for server side source code. or read [self hosted server](#self-hosted-server) to run self hosted server.
