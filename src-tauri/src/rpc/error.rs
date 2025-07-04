@@ -1,5 +1,5 @@
 use axum::response::{IntoResponse, Response};
-use hyper::StatusCode;
+use http::StatusCode;
 
 /// An enum of error handlers for the REST API server.
 #[derive(Debug)]

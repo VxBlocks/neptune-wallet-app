@@ -5,7 +5,6 @@ use neptune_cash::models::blockchain::transaction::transaction_kernel::Transacti
 use neptune_cash::models::blockchain::transaction::validity::collect_lock_scripts::CollectLockScriptsWitness;
 use neptune_cash::models::blockchain::transaction::validity::collect_type_scripts::CollectTypeScriptsWitness;
 use neptune_cash::models::blockchain::transaction::validity::kernel_to_outputs::KernelToOutputsWitness;
-use neptune_cash::models::blockchain::transaction::validity::neptune_proof::Proof;
 use neptune_cash::models::blockchain::transaction::validity::removal_records_integrity::RemovalRecordsIntegrityWitness;
 use neptune_cash::models::blockchain::transaction::{
     primitive_witness::PrimitiveWitness, validity::proof_collection::ProofCollection,
@@ -14,17 +13,11 @@ use neptune_cash::models::proof_abstractions::mast_hash::MastHash;
 use neptune_cash::models::proof_abstractions::SecretWitness;
 use neptune_cash::prelude::tasm_lib;
 use neptune_cash::prelude::triton_vm::vm::PublicInput;
-use tasm_lib::triton_vm::prelude::Program;
 use tasm_lib::triton_vm::proof::Claim;
-use tasm_lib::triton_vm::prove;
-use tasm_lib::triton_vm::stark::Stark;
-use tasm_lib::triton_vm::vm::NonDeterminism;
 
 use tracing::{debug, info};
 
-pub(super) struct ProofBuilder {}
-
-impl ProofBuilder {
+impl super::ProofBuilder {
     pub fn produce_proof_collection(
         &self,
         primitive_witness: &PrimitiveWitness,
@@ -160,21 +153,5 @@ impl ProofBuilder {
             kernel_to_outputs_witness,
             collect_type_scripts_witness,
         )
-    }
-
-    pub(super) fn new() -> Self {
-        Self {}
-    }
-    fn produce(
-        program: Program,
-        claim: Claim,
-        non_determinism: NonDeterminism,
-    ) -> anyhow::Result<Proof> {
-        let default_stark: Stark = Stark::default();
-
-        let proof = prove(default_stark, &claim, program, non_determinism)?;
-        info!("triton-vm: completed proof");
-
-        Ok(proof.into())
     }
 }

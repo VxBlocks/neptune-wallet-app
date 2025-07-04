@@ -143,7 +143,7 @@ impl TransactionUpdater {
             .await?
             .context("Failed to get tip block")?;
 
-        let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after();
+        let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after()?;
 
         let block_height = tip.header().height;
         for tx_output in tx_outputs.iter_mut() {

@@ -17,6 +17,7 @@ mod service;
 #[cfg(feature = "gui")]
 mod session_store;
 pub mod wallet;
+mod prover;
 
 #[cfg(feature = "gui")]
 use command::commands::{

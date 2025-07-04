@@ -158,14 +158,14 @@ impl SyncState {
 
         let mut previous_mutator_set_accumulator = match start {
             0 => MutatorSetAccumulator::default(),
-            1 => Block::genesis(self.wallet.network).mutator_set_accumulator_after(),
+            1 => Block::genesis(self.wallet.network).mutator_set_accumulator_after()?,
             _ => {
                 let block = self
                     .fake_archival_state
                     .get_block_by_height(start - 1)
                     .await?
                     .context("prev block do not exists")?;
-                block.mutator_set_accumulator_after()
+                block.mutator_set_accumulator_after()?
             }
         };
 
@@ -284,7 +284,7 @@ impl SyncState {
 
         debug!("get block done: {}", current_height);
 
-        let current_mutator_set_accumulator = current_block.mutator_set_accumulator_after();
+        let current_mutator_set_accumulator = current_block.mutator_set_accumulator_after()?;
 
         debug!("update wallet state with new block: {}", current_height);
 
@@ -314,7 +314,7 @@ impl SyncState {
                 .await
                 .context(format!("failed to get block at height: {}", fork))?
                 .context("fork block not found")?;
-            *previous_mutator_set_accumulator = fork_block.mutator_set_accumulator_after();
+            *previous_mutator_set_accumulator = fork_block.mutator_set_accumulator_after()?;
 
             self.update(fork);
             self.fake_archival_state

@@ -12,7 +12,7 @@ use axum::{extract::Path, routing::get};
 use axum_extra::response::ErasedJson;
 use block::get_tip_height;
 use error::RestError;
-use hyper::StatusCode;
+use http::StatusCode;
 use neptune_cash::models::{
     blockchain::type_scripts::native_currency_amount::NativeCurrencyAmount,
     state::wallet::utxo_notification::UtxoNotificationMedium,

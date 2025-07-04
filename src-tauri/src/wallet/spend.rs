@@ -28,6 +28,7 @@ use num_traits::CheckedSub;
 use thiserror::Error;
 use tracing::*;
 
+use crate::prover::ProofBuilder;
 use crate::rpc_client::BroadcastError;
 use crate::{rpc_client, wallet::wallet_state_table::ExpectedUtxoData};
 
@@ -245,7 +246,7 @@ impl super::WalletState {
         prover_capability: TxProvingCapability,
         tip: &Block,
     ) -> anyhow::Result<(Transaction, TransactionDetails, Option<TxOutput>)> {
-        let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after();
+        let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after()?;
 
         // 1. create/add change output if necessary.
         let total_spend = tx_outputs.total_native_coins() + fee;
@@ -390,7 +391,7 @@ impl super::WalletState {
             TxProvingCapability::PrimitiveWitness => TransactionProof::Witness(primitive_witness),
             TxProvingCapability::LockScript => todo!(),
             TxProvingCapability::ProofCollection => {
-                let proof_builder = super::proof_builder::ProofBuilder::new();
+                let proof_builder = ProofBuilder::new();
                 let collection = tokio::task::spawn_blocking(move || {
                     proof_builder.produce_proof_collection(&primitive_witness)
                 })

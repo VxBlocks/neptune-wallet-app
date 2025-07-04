@@ -48,7 +48,6 @@ pub mod block_cache;
 mod key_cache;
 mod keys;
 mod pending;
-mod proof_builder;
 mod spend;
 pub mod sync;
 pub mod wallet_file;
@@ -177,7 +176,7 @@ impl WalletState {
         let MutatorSetUpdate {
             additions: addition_records,
             removals: _removal_records,
-        } = block.mutator_set_update();
+        } = block.mutator_set_update()?;
 
         let mut removal_records = block.body().transaction_kernel().inputs.clone();
         removal_records.reverse();
@@ -344,7 +343,7 @@ impl WalletState {
         let gusser_incoming_utxos = if block.header().guesser_digest == receiver_digest {
             let sender_randomness = block.hash();
             block
-                .guesser_fee_utxos()
+                .guesser_fee_utxos()?
                 .into_iter()
                 .map(|utxo| IncomingUtxo {
                     utxo,
@@ -403,7 +402,7 @@ impl WalletState {
         let gusser_incoming_utxos = if block.header().guesser_digest == receiver_digest {
             let sender_randomness = block.hash();
             block
-                .guesser_fee_utxos()
+                .guesser_fee_utxos()?
                 .into_iter()
                 .map(|utxo| IncomingUtxo {
                     utxo,
@@ -460,7 +459,7 @@ impl WalletState {
         let MutatorSetUpdate {
             additions: addition_records,
             removals: _removal_records,
-        } = block.mutator_set_update();
+        } = block.mutator_set_update()?;
 
         let expected_utxos = self.expected_utxos().await?;
         let eu_map: HashMap<_, _> = expected_utxos

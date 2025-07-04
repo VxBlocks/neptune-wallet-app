@@ -19,7 +19,7 @@ chrono = "0.4.31"
 
 [dependencies.neptune-cash]
 git = "https://github.com/VxBlocks/neptune-wallet-core.git"
-branch = "wallet"
+rev = "1ceb329"
 default-features = false
 
 [dependencies]
@@ -46,10 +46,10 @@ tracing-subscriber = { version = "0.3", features = [
 ] }
 tokio-serde = { version = "0.8", features = ["bincode", "json"] }
 tarpc = "0.34.0"
-reqwest = { version = "0.12.15", features = ["json"] }
+reqwest = { version = "0.12.22", features = ["json"] }
 num-traits = "0.2.19"
 clap = "4.5.32"
-hyper = { version = "1.6.0", features = ["full"] }
+# hyper = { version = "1.6.0", features = ["full"] }
 aes-gcm = "0.10.3"
 hkdf = "0.12.4"
 p256 = { version = "0.13.2", features = ["ecdh"] }
@@ -76,6 +76,7 @@ zstd = "0.13.3"
 thiserror = "2.0.12"
 enum_dispatch = "0.3.13"
 strum = "0.27.1"
+http = "1.3.1"
 
 [target.'cfg(target_os = "android")'.dependencies]
 openssl-sys = { version = "0.9.106", features = ["vendored"] }
