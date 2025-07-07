@@ -290,8 +290,9 @@ impl SyncState {
 
         let mut should_update = self.updated_to_tip.load(Ordering::Relaxed) == 1;
         if should_update {
-            let now = Timestamp::now().to_millis();
-            if now - current_block.header().timestamp.to_millis() > 26 * 60 * 1000 {
+            if (Timestamp::now() - current_block.header().timestamp).as_duration()
+                > Duration::from_secs(26 * 60)
+            {
                 should_update = false
             }
         }
@@ -353,12 +354,7 @@ impl SyncState {
     }
 
     fn syncing_new_tip(&self, height: u64) {
-        if let Ok(_) =
-            self.updated_to_tip
-                .compare_exchange(1, 0, Ordering::Relaxed, Ordering::Relaxed)
-        {
-            let _ = crate::service::app::emit_event_to("main", "syncing_new_block", height);
-        }
+        let _ = crate::service::app::emit_event_to("main", "syncing_new_block", height);
     }
 
     pub async fn cancel_sync(&self) {

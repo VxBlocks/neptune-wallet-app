@@ -88,7 +88,14 @@ impl TransactionUpdater {
 
     pub async fn update_transactions(&self, wallet_state: &WalletState) {
         info!("Updating transactions");
-        let mut tx = self.pool.acquire().await.unwrap();
+        let mut tx = match self.pool.acquire().await {
+            Ok(conn) => conn,
+            Err(err) => {
+                error!("Error acquiring database connection: {}", err);
+                return;
+            }
+        };
+
         let transactions = match self.get_pending_transactions(&mut *tx).await {
             Ok(transactions) => transactions,
             Err(err) => {
