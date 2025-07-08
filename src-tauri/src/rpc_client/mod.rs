@@ -75,7 +75,7 @@ impl NodeRpcClient {
     }
 
     fn get_client() -> reqwest::Client {
-        reqwest::ClientBuilder::new().no_proxy().build().unwrap()
+        reqwest::Client::new()
     }
 
     pub async fn request_block(&self, height: u64) -> Result<Option<Block>> {
