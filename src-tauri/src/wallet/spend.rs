@@ -391,9 +391,8 @@ impl super::WalletState {
             TxProvingCapability::PrimitiveWitness => TransactionProof::Witness(primitive_witness),
             TxProvingCapability::LockScript => todo!(),
             TxProvingCapability::ProofCollection => {
-                let proof_builder = ProofBuilder::new();
                 let collection = tokio::task::spawn_blocking(move || {
-                    proof_builder.produce_proof_collection(&primitive_witness)
+                    ProofBuilder::produce_proof_collection(&primitive_witness)
                 })
                 .await??;
 

@@ -1,3 +1,4 @@
+use neptune_cash::api::export::{NativeCurrencyAmount, Network};
 use neptune_cash::models::blockchain::transaction::validity::neptune_proof::Proof;
 
 use neptune_cash::prelude::tasm_lib;
@@ -12,11 +13,17 @@ use tracing::*;
 mod proof_collection;
 mod single_proof;
 
-pub struct ProofBuilder {}
+pub struct ProofBuilder {
+    gobble_fee: Option<NativeCurrencyAmount>,
+    network: Network,
+}
 
 impl ProofBuilder {
-    pub(super) fn new() -> Self {
-        Self {}
+    pub fn new(gobble_fee: Option<NativeCurrencyAmount>, network: Network) -> Self {
+        Self {
+            gobble_fee,
+            network,
+        }
     }
     fn produce(
         program: Program,
