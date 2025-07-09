@@ -11,91 +11,66 @@ mod config;
 mod gui;
 mod logger;
 mod os;
+pub mod prover;
 mod rpc;
-mod rpc_client;
+pub mod rpc_client;
 mod service;
 #[cfg(feature = "gui")]
 mod session_store;
 pub mod wallet;
-mod prover;
-
-#[cfg(feature = "gui")]
-use command::commands::{
-    add_wallet, delete_cache, export_wallet, generate_snapshot_file, get_disk_cache, get_network,
-    get_remote_rest, get_wallet_id, get_wallets, has_password, input_password, list_cache,
-    remove_wallet, reset_to_height, set_disk_cache, set_network, set_password, set_remote_rest,
-    set_wallet_id, snapshot_dir, try_password, wallet_address,
-};
-#[cfg(feature = "gui")]
-use logger::{clear_logs, get_log_level, get_logs, log, set_log_level};
-#[cfg(feature = "gui")]
-use os::{is_win11, os_info, platform};
-#[cfg(feature = "gui")]
-use rpc::commands::{
-    avaliable_utxos, current_wallet_address, forget_tx, get_server_url, get_tip_height, history,
-    pending_transactions, run_rpc_server, send_to_address, stop_rpc_server, sync_state,
-    wallet_balance,
-};
-#[cfg(feature = "gui")]
-use service::app::{get_build_info, update_info};
-
-#[cfg(feature = "gui")]
-use session_store::command::{
-    persist_store_execute, session_store_del, session_store_get, session_store_set,
-};
+pub use neptune_cash;
 
 #[cfg(feature = "gui")]
 pub fn add_commands<R: tauri::Runtime>(app: tauri::Builder<R>) -> tauri::Builder<R> {
     app.invoke_handler(tauri::generate_handler![
-        // myhandler,
-        get_logs,
-        clear_logs,
-        is_win11,
-        os_info,
-        platform,
-        get_server_url,
-        get_build_info,
-        get_network,
-        get_remote_rest,
-        set_network,
-        set_remote_rest,
-        get_wallet_id,
-        get_wallets,
-        add_wallet,
-        remove_wallet,
-        export_wallet,
-        wallet_address,
-        set_wallet_id,
-        stop_rpc_server,
-        run_rpc_server,
-        input_password,
-        set_password,
-        has_password,
-        try_password,
-        set_log_level,
-        get_log_level,
-        log,
-        session_store_get,
-        session_store_set,
-        session_store_del,
-        persist_store_execute,
-        generate_snapshot_file,
-        snapshot_dir,
-        update_info,
-        set_disk_cache,
-        get_disk_cache,
-        reset_to_height,
-        list_cache,
-        delete_cache,
-        sync_state,
-        wallet_balance,
-        current_wallet_address,
-        history,
-        avaliable_utxos,
-        send_to_address,
-        pending_transactions,
-        forget_tx,
-        get_tip_height,
+        command::commands::add_wallet,
+        command::commands::delete_cache,
+        command::commands::export_wallet,
+        command::commands::generate_snapshot_file,
+        command::commands::get_disk_cache,
+        command::commands::get_network,
+        command::commands::get_remote_rest,
+        command::commands::get_wallet_id,
+        command::commands::get_wallets,
+        command::commands::has_password,
+        command::commands::input_password,
+        command::commands::list_cache,
+        command::commands::remove_wallet,
+        command::commands::reset_to_height,
+        command::commands::set_disk_cache,
+        command::commands::set_network,
+        command::commands::set_password,
+        command::commands::set_remote_rest,
+        command::commands::set_wallet_id,
+        command::commands::snapshot_dir,
+        command::commands::try_password,
+        command::commands::wallet_address,
+        rpc::commands::avaliable_utxos,
+        rpc::commands::current_wallet_address,
+        rpc::commands::forget_tx,
+        rpc::commands::get_server_url,
+        rpc::commands::get_tip_height,
+        rpc::commands::history,
+        rpc::commands::pending_transactions,
+        rpc::commands::run_rpc_server,
+        rpc::commands::send_to_address,
+        rpc::commands::stop_rpc_server,
+        rpc::commands::sync_state,
+        rpc::commands::wallet_balance,
+        os::is_win11,
+        os::os_info,
+        os::platform,
+        logger::clear_logs,
+        logger::get_log_level,
+        logger::get_logs,
+        logger::log,
+        logger::set_log_level,
+        session_store::command::persist_store_execute,
+        session_store::command::session_store_del,
+        session_store::command::session_store_get,
+        session_store::command::session_store_set,
+        service::app::get_build_info,
+        service::app::update_info,
     ])
 }
 

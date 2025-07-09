@@ -193,14 +193,14 @@ fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
 }
 
 #[cfg(desktop)]
-fn setup_window<R: tauri::Runtime>(window: &tauri::WebviewWindow<R>) {
+fn setup_window<R: tauri::Runtime>(_window: &tauri::WebviewWindow<R>) {
     #[cfg(debug_assertions)] // only include this code on debug builds
     {
-        window.open_devtools();
+        _window.open_devtools();
     }
 
     #[cfg(any(windows, target_os = "macos"))]
-    let _ = window.set_shadow(true);
+    let _ = _window.set_shadow(true);
 }
 
 #[cfg(desktop)]
