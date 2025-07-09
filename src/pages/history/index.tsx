@@ -13,7 +13,7 @@ export default function HistoryPage() {
     return (<WithTitlePageHeader title="History">
         {
             perDay && perDay.length > 0 && <BarChart
-                h={400}
+                h={150}
                 data={perDay}
                 yAxisProps={{ domain: [0, 'auto'] }}
                 dataKey="data"
@@ -21,13 +21,13 @@ export default function HistoryPage() {
                 valueFormatter={(value) => new Intl.NumberFormat('en-US').format(Math.floor(value))}
                 withBarValueLabel
                 valueLabelProps={{ fill: 'teal' }}
-                withLegend
-                legendProps={{ verticalAlign: 'bottom'}}
+                style={{ marginBottom: 10 }}
                 series={[
                     { name: 'Received', color: 'violet.6' },
                     { name: 'Spent', color: 'teal.6' },
                 ]}
             />
+            
         }
         <SegmentedControl
             value={section}

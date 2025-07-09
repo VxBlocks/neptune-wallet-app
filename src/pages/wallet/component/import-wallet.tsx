@@ -1,4 +1,3 @@
-import { run_rpc_server, stop_rpc_server } from "@/commands/app";
 import { addWallet, setCurrentWallet } from "@/commands/wallet";
 import { Button, Flex, NumberInput, Textarea, TextInput } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
