@@ -62,7 +62,7 @@ impl super::ProofBuilder {
                 self.network,
             )?;
 
-            return self.merge_single_proof(transaction, gobble_tx);
+            return self.merge_single_proof(new_tx, gobble_tx);
         }
 
         Ok(new_tx)
