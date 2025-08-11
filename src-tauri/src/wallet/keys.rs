@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::Result;
 use neptune_cash::{
-    models::state::wallet::address::{hash_lock_key::HashLockKey, BaseSpendingKey, SpendingKey},
+    models::state::wallet::address::SpendingKey,
     prelude::tasm_lib::prelude::Digest,
 };
 use rayon::prelude::*;
@@ -20,7 +20,7 @@ impl super::WalletState {
         spending_key.to_address().to_bech32m(self.network)
     }
 
-    pub fn get_known_spending_keys(&self) -> Vec<BaseSpendingKey> {
+    pub fn get_known_spending_keys(&self) -> Vec<SpendingKey> {
         let spending_keys = self.get_future_generation_spending_keys(Range {
             start: 0,
             end: self.num_generation_spending_keys() + 1,
@@ -33,11 +33,11 @@ impl super::WalletState {
         });
         let symmetric_keys = symmetric_keys.iter().map(|v| v.1.deref().clone());
 
-        let raw_hash_keys = self.get_known_raw_hash_keys();
+        // let raw_hash_keys = self.get_known_raw_hash_keys();
 
         spending_keys
             .chain(symmetric_keys)
-            .chain(raw_hash_keys)
+            // .chain(raw_hash_keys)
             .collect()
     }
 
@@ -53,21 +53,21 @@ impl super::WalletState {
         self.num_future_keys.load(Ordering::Relaxed)
     }
 
-    pub fn get_known_raw_hash_keys(&self) -> Vec<BaseSpendingKey> {
-        info!("getting known raw hash keys");
-        let ptr = self.know_raw_hash_keys.load(Ordering::Acquire);
-        if ptr.is_null() {
-            return vec![];
-        }
-        let keys: &Vec<Digest> = unsafe { &*ptr };
-        let keys = keys
-            .iter()
-            .map(|v| BaseSpendingKey::RawHashLock(HashLockKey::from_preimage(v.clone())))
-            .collect();
-        keys
-    }
+    // pub fn get_known_raw_hash_keys(&self) -> Vec<SpendingKey> {
+    //     info!("getting known raw hash keys");
+    //     let ptr = self.know_raw_hash_keys.load(Ordering::Acquire);
+    //     if ptr.is_null() {
+    //         return vec![];
+    //     }
+    //     let keys: &Vec<Digest> = unsafe { &*ptr };
+    //     let keys = keys
+    //         .iter()
+    //         .map(|v| SpendingKey::RawHashLock(HashLockKey::from_preimage(v.clone())))
+    //         .collect();
+    //     keys
+    // }
 
-    pub fn get_future_symmetric_keys(&self, range: Range<u64>) -> Vec<(u64, Arc<BaseSpendingKey>)> {
+    pub fn get_future_symmetric_keys(&self, range: Range<u64>) -> Vec<(u64, Arc<SpendingKey>)> {
         let key = &self.key;
         (range.start..range.end)
             .into_par_iter()
@@ -75,7 +75,7 @@ impl super::WalletState {
                 if let Some(key) = self.key_cache.get_symmetric_key(i) {
                     return (i, key);
                 }
-                let new_key = Arc::new(BaseSpendingKey::from(key.nth_symmetric_key(i)));
+                let new_key = Arc::new(SpendingKey::from(key.nth_symmetric_key(i)));
                 self.key_cache.add_symmetric_key(i, new_key.clone());
                 (i, new_key)
             })
@@ -85,7 +85,7 @@ impl super::WalletState {
     pub fn get_future_generation_spending_keys(
         &self,
         range: Range<u64>,
-    ) -> Vec<(u64, Arc<BaseSpendingKey>)> {
+    ) -> Vec<(u64, Arc<SpendingKey>)> {
         let key = &self.key;
         (range.start..range.end)
             .into_par_iter()
@@ -93,7 +93,7 @@ impl super::WalletState {
                 if let Some(key) = self.key_cache.get_generation_spending_key(i) {
                     return (i, key);
                 }
-                let new_key = Arc::new(BaseSpendingKey::from(key.nth_generation_spending_key(i)));
+                let new_key = Arc::new(SpendingKey::from(key.nth_generation_spending_key(i)));
                 self.key_cache
                     .add_generation_spending_key(i, new_key.clone());
                 (i, new_key)

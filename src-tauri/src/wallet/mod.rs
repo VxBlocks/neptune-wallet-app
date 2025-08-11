@@ -20,7 +20,6 @@ use neptune_cash::{
     },
     prelude::tasm_lib::prelude::Digest,
     util_types::mutator_set::{
-        get_swbf_indices,
         mutator_set_accumulator::MutatorSetAccumulator,
         removal_record::{AbsoluteIndexSet, RemovalRecord},
     },
@@ -204,7 +203,7 @@ impl WalletState {
                 );
                 recovery_datas.push(r);
 
-                if incoming_utxo.is_guesser_fee() {
+                if incoming_utxo.is_guesser_fee {
                     gusser_preimage = Some(incoming_utxo.receiver_preimage);
                 }
             }
@@ -338,9 +337,8 @@ impl WalletState {
                 .await?;
         }
 
-        let receiver_preimage = self.key.guesser_preimage(block.header().prev_block_digest);
-        let receiver_digest = receiver_preimage.hash();
-        let gusser_incoming_utxos = if block.header().guesser_digest == receiver_digest {
+        let receiver_preimage = self.key.prover_fee_address().privacy_digest();
+        let gusser_incoming_utxos = if block.header().guesser_receiver_data.receiver_digest == receiver_preimage {
             let sender_randomness = block.hash();
             block
                 .guesser_fee_utxos()?
@@ -349,6 +347,7 @@ impl WalletState {
                     utxo,
                     sender_randomness,
                     receiver_preimage,
+                    is_guesser_fee: true,
                 })
                 .collect_vec()
         } else {
@@ -397,9 +396,9 @@ impl WalletState {
         self.set_num_symmetric_keys(self.num_symmetric_keys())
             .await?;
 
-        let receiver_preimage = self.key.guesser_preimage(block.header().prev_block_digest);
-        let receiver_digest = receiver_preimage.hash();
-        let gusser_incoming_utxos = if block.header().guesser_digest == receiver_digest {
+        let receiver_preimage = self.key.prover_fee_address();
+        let receiver_preimage = receiver_preimage.privacy_digest();
+        let gusser_incoming_utxos = if block.header().guesser_receiver_data.receiver_digest == receiver_preimage {
             let sender_randomness = block.hash();
             block
                 .guesser_fee_utxos()?
@@ -408,6 +407,7 @@ impl WalletState {
                     utxo,
                     sender_randomness,
                     receiver_preimage,
+                    is_guesser_fee: true,
                 })
                 .collect_vec()
         } else {
@@ -441,7 +441,7 @@ impl WalletState {
         let mut spent_own_utxos = vec![];
 
         for monitored_utxo in monitored_utxos {
-            let utxo = monitored_utxo.recovery_data;
+            let utxo: UtxoRecoveryData = monitored_utxo.recovery_data;
 
             if confirmed_absolute_index_sets.contains(&utxo.abs_i()) {
                 spent_own_utxos.push((utxo.utxo.clone(), utxo.abs_i(), monitored_utxo.id));
@@ -490,12 +490,13 @@ pub struct UtxoRecoveryData {
 impl UtxoRecoveryData {
     pub fn abs_i(&self) -> AbsoluteIndexSet {
         let utxo_digest = Hash::hash(&self.utxo);
-        AbsoluteIndexSet::new(&get_swbf_indices(
-            utxo_digest,
+
+        AbsoluteIndexSet::compute(
+            Hash::hash(&self.utxo),
             self.sender_randomness,
             self.receiver_preimage,
             self.aocl_index,
-        ))
+        )
     }
 }
 

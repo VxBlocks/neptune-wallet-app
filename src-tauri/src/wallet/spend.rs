@@ -204,7 +204,7 @@ impl super::WalletState {
         owned_utxo_notify_medium: UtxoNotificationMedium,
         unowned_utxo_notify_medium: UtxoNotificationMedium,
     ) -> TxOutput {
-        let utxo = Utxo::new_native_currency(address.lock_script(), amount);
+        let utxo = Utxo::new_native_currency(address.lock_script_hash(), amount);
 
         let has_matching_spending_key = self.can_unlock(&utxo);
 
@@ -422,7 +422,7 @@ impl super::WalletState {
                 ExpectedUtxo::new(
                     tx_output.utxo(),
                     tx_output.sender_randomness,
-                    spending_key.privacy_preimage().unwrap(),
+                    spending_key.privacy_preimage(),
                     notifier,
                 )
             })

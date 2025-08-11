@@ -5,10 +5,11 @@ use neptune_cash::{
     models::blockchain::{
         block::{block_height::BlockHeight, block_info::BlockInfo, Block},
         transaction::Transaction,
-    },
-    prelude::{tasm_lib::prelude::Digest, twenty_first::prelude::MmrMembershipProof},
-    util_types::mutator_set::chunk_dictionary::ChunkDictionary,
+    }, prelude::twenty_first::prelude::MmrMembershipProof,
+    prelude::twenty_first::prelude::Digest,
+    util_types::mutator_set::removal_record::chunk_dictionary::ChunkDictionary,
 };
+
 use once_cell::sync::Lazy;
 use reqwest;
 use serde::{Deserialize, Serialize};

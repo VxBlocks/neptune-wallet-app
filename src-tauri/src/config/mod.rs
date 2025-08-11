@@ -125,7 +125,6 @@ impl Config {
         let network = self.get_network().await?;
         match network {
             Network::Main => Ok("remote_rest"),
-            Network::Testnet => Ok("remote_rest_testnet"),
             Network::RegTest => Ok("remote_rest_regtest"),
             _ => Ok("remote_rest"),
         }

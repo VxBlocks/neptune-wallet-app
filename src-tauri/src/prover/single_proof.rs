@@ -219,22 +219,20 @@ impl super::ProofBuilder {
             "Mutator sets must be equal for transaction merger."
         );
 
-        let tx1_single_proof = match tx1.proof {
-            TransactionProof::SingleProof(proof) => proof,
-            _ => return Err(anyhow!("tx1 does not contain a SingleProof")),
-        };
-        let tx2_single_proof = match tx2.proof {
-            TransactionProof::SingleProof(proof) => proof,
-            _ => return Err(anyhow!("tx2 does not contain a SingleProof")),
-        };
+        // let tx1_single_proof = match tx1.proof {
+        //     TransactionProof::SingleProof(proof) => proof,
+        //     _ => return Err(anyhow!("tx1 does not contain a SingleProof")),
+        // };
+        // let tx2_single_proof = match tx2.proof {
+        //     TransactionProof::SingleProof(proof) => proof,
+        //     _ => return Err(anyhow!("tx2 does not contain a SingleProof")),
+        // };
 
         let gobble_shuffle_seed: [u8; 32] = rng().random();
 
         let merge_witness = MergeWitness::from_transactions(
-            tx1.kernel,
-            tx1_single_proof,
-            tx2.kernel,
-            tx2_single_proof,
+            tx1,
+            tx2,
             gobble_shuffle_seed,
         );
 

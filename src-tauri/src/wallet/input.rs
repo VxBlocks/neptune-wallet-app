@@ -7,7 +7,7 @@ use neptune_cash::{
         },
         proof_abstractions::timestamp::Timestamp,
         state::wallet::{
-            address::{BaseSpendingKey, ReceivingAddress},
+            address::{ReceivingAddress, SpendingKey},
             unlocked_utxo::UnlockedUtxo,
         },
     },
@@ -191,7 +191,7 @@ impl super::WalletState {
 
     // returns Some(SpendingKey) if the utxo can be unlocked by one of the known
     // wallet keys.
-    pub fn find_spending_key_for_utxo(&self, utxo: &Utxo) -> Option<BaseSpendingKey> {
+    pub fn find_spending_key_for_utxo(&self, utxo: &Utxo) -> Option<SpendingKey> {
         self.get_known_spending_keys()
             .into_iter()
             .find(|k| k.lock_script_hash() == utxo.lock_script_hash())

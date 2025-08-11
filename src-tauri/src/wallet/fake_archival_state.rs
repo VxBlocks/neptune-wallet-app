@@ -146,9 +146,8 @@ impl SnapshotNetwork {
         match self.0 {
             Network::Main => 0,
             Network::TestnetMock => 1,
-            Network::Beta => 2,
-            Network::Testnet => 3,
-            Network::RegTest => 4,
+            Network::RegTest => 2,
+            Network::Testnet(i) => i as u8 + 3,
             _ => todo!(),
         }
     }
@@ -157,9 +156,8 @@ impl SnapshotNetwork {
         Ok(Self(match bytes {
             0 => Network::Main,
             1 => Network::TestnetMock,
-            2 => Network::Beta,
-            3 => Network::Testnet,
-            4 => Network::RegTest,
+            2 => Network::RegTest,
+            3 => Network::Testnet(0),
             _ => bail!("Invalid network"),
         }))
     }
