@@ -166,18 +166,18 @@ impl WalletState {
         let _spend_guard = self.spend_lock.lock().await;
 
         debug!("check fork");
-        if let Some(fork_point) = self.check_fork(&block).await.context("check fork")? {
-            info!(
-                "reorganize_to_height: {} {}",
-                fork_point.0,
-                fork_point.1.to_hex()
-            );
-            self.reorganize_to_height(&mut *tx, fork_point.0, fork_point.1)
-                .await
-                .context("reorganize_to_height")?;
-            tx.commit().await.context("commit db")?;
-            return Ok(Some(fork_point.0));
-        }
+        // if let Some(fork_point) = self.check_fork(&block).await.context("check fork")? {
+        //     info!(
+        //         "reorganize_to_height: {} {}",
+        //         fork_point.0,
+        //         fork_point.1.to_hex()
+        //     );
+        //     self.reorganize_to_height(&mut *tx, fork_point.0, fork_point.1)
+        //         .await
+        //         .context("reorganize_to_height")?;
+        //     tx.commit().await.context("commit db")?;
+        //     return Ok(Some(fork_point.0));
+        // }
         debug!("update mutator set");
 
         let MutatorSetUpdate {
