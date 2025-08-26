@@ -1,22 +1,32 @@
 use anyhow::{anyhow, Context, Result};
 use neptune_cash::{models::blockchain::block::Block, prelude::tasm_lib::prelude::Digest};
+use tracing::debug;
 
 use crate::rpc_client;
 
 impl super::WalletState {
     pub async fn check_fork(&self, block: &Block) -> Result<Option<(u64, Digest)>> {
-        if block.header().height.is_genesis() {
+        if block.header().height.value() <= 1 {
             return Ok(None);
         }
 
-        if let Some((_, prev_digest)) = self.get_tip().await? {
+        debug!(
+            "Checking fork for block {} {} {}",
+            block.header().height,
+            block.hash().to_hex(),
+            block.header().prev_block_digest.to_hex()
+        );
+
+        if let Some((prev_height, prev_digest)) = self.get_tip().await.context("get tip")? {
+            debug!("prev digest: {} {:?}", prev_height, prev_digest.to_hex());
             //prev is forked
             if block.header().prev_block_digest != prev_digest {
                 let mut prev_digest = block.header().prev_block_digest;
                 loop {
                     let prev = rpc_client::node_rpc_client()
                         .get_block_info(&prev_digest.to_hex())
-                        .await?;
+                        .await
+                        .context("try get_prev_block_info")?;
 
                     match prev {
                         Some(prev) => {
@@ -24,7 +34,7 @@ impl super::WalletState {
                                 let blk_before_fork = rpc_client::node_rpc_client()
                                     .get_block_info(&prev.prev_block_digest.to_hex())
                                     .await?
-                                    .context("")?;
+                                    .context("try get_block_info before fork")?;
                                 return Ok(Some((
                                     blk_before_fork.height.into(),
                                     blk_before_fork.digest,

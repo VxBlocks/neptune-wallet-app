@@ -16,6 +16,7 @@ use neptune_cash::{
             shared::Hash,
             transaction::utxo::Utxo,
         },
+        proof_abstractions::mast_hash::MastHash,
         state::wallet::{incoming_utxo::IncomingUtxo, wallet_entropy::WalletEntropy},
     },
     prelude::tasm_lib::prelude::Digest,
@@ -165,19 +166,27 @@ impl WalletState {
         let _spend_guard = self.spend_lock.lock().await;
 
         debug!("check fork");
-        if let Some(fork_point) = self.check_fork(&block).await? {
+        if let Some(fork_point) = self.check_fork(&block).await.context("check fork")? {
+            info!(
+                "reorganize_to_height: {} {}",
+                fork_point.0,
+                fork_point.1.to_hex()
+            );
             self.reorganize_to_height(&mut *tx, fork_point.0, fork_point.1)
-                .await?;
-            tx.commit().await?;
+                .await
+                .context("reorganize_to_height")?;
+            tx.commit().await.context("commit db")?;
             return Ok(Some(fork_point.0));
         }
+        debug!("update mutator set");
 
         let MutatorSetUpdate {
             additions: addition_records,
-            removals: _removal_records,
+            removals: removal_records,
         } = block.mutator_set_update()?;
 
-        let mut removal_records = block.body().transaction_kernel().inputs.clone();
+        debug!("get removal_records");
+        let mut removal_records = removal_records;
         removal_records.reverse();
         let mut removal_records: Vec<&mut RemovalRecord> =
             removal_records.iter_mut().collect::<Vec<_>>();
@@ -279,6 +288,11 @@ impl WalletState {
         self.update_utxos_with_expected_utxos(&mut *tx, expected, height.try_into()?)
             .await?;
 
+        debug!(
+            "set tip {} {}",
+            block.header().height.value(),
+            block.kernel.mast_hash().to_hex()
+        );
         self.set_tip(&mut *tx, (block.header().height.into(), block.hash()))
             .await?;
 
@@ -338,21 +352,22 @@ impl WalletState {
         }
 
         let receiver_preimage = self.key.prover_fee_address().privacy_digest();
-        let gusser_incoming_utxos = if block.header().guesser_receiver_data.receiver_digest == receiver_preimage {
-            let sender_randomness = block.hash();
-            block
-                .guesser_fee_utxos()?
-                .into_iter()
-                .map(|utxo| IncomingUtxo {
-                    utxo,
-                    sender_randomness,
-                    receiver_preimage,
-                    is_guesser_fee: true,
-                })
-                .collect_vec()
-        } else {
-            vec![]
-        };
+        let gusser_incoming_utxos =
+            if block.header().guesser_receiver_data.receiver_digest == receiver_preimage {
+                let sender_randomness = block.hash();
+                block
+                    .guesser_fee_utxos()?
+                    .into_iter()
+                    .map(|utxo| IncomingUtxo {
+                        utxo,
+                        sender_randomness,
+                        receiver_preimage,
+                        is_guesser_fee: true,
+                    })
+                    .collect_vec()
+            } else {
+                vec![]
+            };
 
         utxos.extend(gusser_incoming_utxos);
 
@@ -398,21 +413,22 @@ impl WalletState {
 
         let receiver_preimage = self.key.prover_fee_address();
         let receiver_preimage = receiver_preimage.privacy_digest();
-        let gusser_incoming_utxos = if block.header().guesser_receiver_data.receiver_digest == receiver_preimage {
-            let sender_randomness = block.hash();
-            block
-                .guesser_fee_utxos()?
-                .into_iter()
-                .map(|utxo| IncomingUtxo {
-                    utxo,
-                    sender_randomness,
-                    receiver_preimage,
-                    is_guesser_fee: true,
-                })
-                .collect_vec()
-        } else {
-            vec![]
-        };
+        let gusser_incoming_utxos =
+            if block.header().guesser_receiver_data.receiver_digest == receiver_preimage {
+                let sender_randomness = block.hash();
+                block
+                    .guesser_fee_utxos()?
+                    .into_iter()
+                    .map(|utxo| IncomingUtxo {
+                        utxo,
+                        sender_randomness,
+                        receiver_preimage,
+                        is_guesser_fee: true,
+                    })
+                    .collect_vec()
+            } else {
+                vec![]
+            };
 
         let receive = spend_to_spendingkeys
             .chain(spend_to_symmetrickeys)
@@ -492,7 +508,7 @@ impl UtxoRecoveryData {
         let utxo_digest = Hash::hash(&self.utxo);
 
         AbsoluteIndexSet::compute(
-            Hash::hash(&self.utxo),
+            utxo_digest,
             self.sender_randomness,
             self.receiver_preimage,
             self.aocl_index,

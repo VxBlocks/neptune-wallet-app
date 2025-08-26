@@ -60,7 +60,7 @@ impl<'a> MakeWriter<'a> for MemoryLogger {
 }
 
 pub fn setup_logger(level: Option<String>) -> anyhow::Result<()> {
-    let target_filter = build_target_filter(&level.unwrap_or("info".to_string()));
+    let target_filter = build_target_filter(&level.unwrap_or("debug".to_string()));
     let (filter, reload_handle) = reload::Layer::new(target_filter);
     let _ = LOG_HANDLER.set(Mutex::new(reload_handle));
 
