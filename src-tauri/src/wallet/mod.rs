@@ -411,24 +411,27 @@ impl WalletState {
         self.set_num_symmetric_keys(self.num_symmetric_keys())
             .await?;
 
-        let receiver_preimage = self.key.prover_fee_address();
-        let receiver_preimage = receiver_preimage.privacy_digest();
-        let gusser_incoming_utxos =
-            if block.header().guesser_receiver_data.receiver_digest == receiver_preimage {
-                let sender_randomness = block.hash();
-                block
-                    .guesser_fee_utxos()?
-                    .into_iter()
-                    .map(|utxo| IncomingUtxo {
-                        utxo,
-                        sender_randomness,
-                        receiver_preimage,
-                        is_guesser_fee: true,
-                    })
-                    .collect_vec()
-            } else {
-                vec![]
-            };
+        let own_guesser_key = self.key.guesser_fee_key();
+        let was_guessed_by_us = block
+            .header()
+            .was_guessed_by(own_guesser_key.to_address().into());
+
+        let gusser_incoming_utxos = if was_guessed_by_us {
+            let sender_randomness = block.hash();
+            block
+                .guesser_fee_utxos()
+                .expect("Block argument must have guesser fee UTXOs")
+                .into_iter()
+                .map(|utxo| IncomingUtxo {
+                    utxo,
+                    sender_randomness,
+                    receiver_preimage: own_guesser_key.receiver_preimage(),
+                    is_guesser_fee: true,
+                })
+                .collect_vec()
+        } else {
+            vec![]
+        };
 
         let receive = spend_to_spendingkeys
             .chain(spend_to_symmetrickeys)
