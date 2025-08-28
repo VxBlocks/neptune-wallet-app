@@ -5,8 +5,9 @@ use neptune_cash::{
     models::blockchain::{
         block::{block_height::BlockHeight, block_info::BlockInfo, Block},
         transaction::Transaction,
-    }, prelude::twenty_first::prelude::MmrMembershipProof,
+    },
     prelude::twenty_first::prelude::Digest,
+    prelude::twenty_first::prelude::MmrMembershipProof,
     util_types::mutator_set::removal_record::chunk_dictionary::ChunkDictionary,
 };
 
@@ -56,6 +57,28 @@ struct ResponseSendTx {
     message: String,
 }
 
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct RpcBlock {
+    pub block: Block,
+    pub hash: Digest,
+}
+
+impl RpcBlock {
+    pub fn to_block(&self) -> Block {
+        let block = self.block.clone();
+        block.digest.get_or_init(|| self.hash);
+        block
+    }
+
+    pub fn from_block(block: Block) -> Self {
+        let hash = block.hash();
+        Self {
+            block: block,
+            hash: hash,
+        }
+    }
+}
+
 impl NodeRpcClient {
     pub fn new(rest_server: &str) -> Self {
         Self {
@@ -79,7 +102,7 @@ impl NodeRpcClient {
         reqwest::Client::new()
     }
 
-    pub async fn request_block(&self, height: u64) -> Result<Option<Block>> {
+    pub async fn request_block(&self, height: u64) -> Result<Option<RpcBlock>> {
         let block = Self::get_client()
             .get(format!(
                 "{}/rpc/block/height/{}",
@@ -90,8 +113,9 @@ impl NodeRpcClient {
             .send()
             .await?
             .error_for_status()?
-            .json::<Option<Block>>()
+            .json::<Option<RpcBlock>>()
             .await?;
+
         Ok(block)
     }
 
@@ -123,7 +147,7 @@ impl NodeRpcClient {
         Ok(block)
     }
 
-    pub async fn request_block_by_digest(&self, digest: &str) -> Result<Option<Block>> {
+    pub async fn request_block_by_digest(&self, digest: &str) -> Result<Option<RpcBlock>> {
         let block = Self::get_client()
             .get(format!(
                 "{}/rpc/block/digest/{}",
@@ -134,7 +158,7 @@ impl NodeRpcClient {
             .send()
             .await?
             .error_for_status()?
-            .json::<Option<Block>>()
+            .json::<Option<RpcBlock>>()
             .await?;
         Ok(block)
     }
@@ -143,7 +167,7 @@ impl NodeRpcClient {
         &self,
         height: u64,
         batch_size: u64,
-    ) -> Result<Vec<Block>> {
+    ) -> Result<Vec<RpcBlock>> {
         let body = Self::get_client()
             .get(format!(
                 "{}/rpc/batch_block/{}/{}",
@@ -158,7 +182,7 @@ impl NodeRpcClient {
             .bytes()
             .await?;
 
-        let blocks: Vec<Block> = bincode::deserialize(&body)?;
+        let blocks: Vec<RpcBlock> = bincode::deserialize(&body)?;
 
         Ok(blocks)
     }

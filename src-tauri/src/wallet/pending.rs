@@ -1,6 +1,7 @@
 use crate::rpc_client;
 use anyhow::{Context, Result};
 use neptune_cash::models::{
+    blockchain::block::Block,
     proof_abstractions::timestamp::Timestamp,
     state::{
         transaction_details::TransactionDetails, tx_proving_capability::TxProvingCapability,
@@ -145,10 +146,11 @@ impl TransactionUpdater {
 
         let (unlocked_new, tip_digest) = wallet_state.unlock_utxos(recovery_data_list).await?;
 
-        let tip = rpc_client::node_rpc_client()
+        let tip: Block = rpc_client::node_rpc_client()
             .request_block_by_digest(&tip_digest.to_hex())
             .await?
-            .context("Failed to get tip block")?;
+            .context("Failed to get tip block")?
+            .to_block();
 
         let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after()?;
 

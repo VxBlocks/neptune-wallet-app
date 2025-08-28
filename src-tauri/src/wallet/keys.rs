@@ -5,12 +5,8 @@ use std::{
 };
 
 use anyhow::Result;
-use neptune_cash::{
-    models::state::wallet::address::SpendingKey,
-    prelude::tasm_lib::prelude::Digest,
-};
+use neptune_cash::models::state::wallet::address::SpendingKey;
 use rayon::prelude::*;
-use tracing::info;
 
 impl super::WalletState {
     pub async fn get_address(&self, index: u64) -> Result<String> {

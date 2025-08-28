@@ -19,7 +19,7 @@ use tokio::{
 use tracing::*;
 
 use crate::{
-    rpc_client,
+    rpc_client::{self, RpcBlock},
     wallet::block_cache::{BlockCache, BlockCacheImpl},
 };
 use anyhow::{bail, ensure, Context, Result};
@@ -52,18 +52,26 @@ impl FakeArchivalState {
 
         if let Some(blocks) = self.read_block_from_snapshot(height, batch_size).await {
             // add to temp cache as it is already in snapshot
-            self.block_cache.add_blocks_temp(blocks).await?;
+            self.block_cache
+                .add_blocks_temp(blocks.iter().map(|rpc_block| rpc_block.to_block()))
+                .await?;
             return Ok(());
         }
 
         let blocks = rpc_client::node_rpc_client()
             .request_block_by_height_range(height, batch_size)
             .await?;
-        self.block_cache.add_blocks(blocks).await?;
+        self.block_cache
+            .add_blocks(blocks.iter().map(|rpc_block| rpc_block.to_block()))
+            .await?;
         Ok(())
     }
 
-    async fn read_block_from_snapshot(&self, height: u64, batch_size: u64) -> Option<Vec<Block>> {
+    async fn read_block_from_snapshot(
+        &self,
+        height: u64,
+        batch_size: u64,
+    ) -> Option<Vec<RpcBlock>> {
         if let Some(reader) = self.snapshot_reader.as_ref() {
             return reader
                 .read_blocks(self.network, (height..height + batch_size).into())
@@ -81,11 +89,11 @@ impl FakeArchivalState {
         let result = rpc_client::node_rpc_client().request_block(height).await?;
         if self.block_cache.is_persist() {
             if let Some(block) = &result {
-                self.block_cache.add_block(block.clone()).await?;
+                self.block_cache.add_block(block.to_block()).await?;
             }
         }
 
-        Ok(result)
+        Ok(result.map(|rpc_block| rpc_block.to_block()))
     }
 
     #[allow(dead_code)]
@@ -98,9 +106,10 @@ impl FakeArchivalState {
             "get_block_by_digest: requesting block {} from rest server",
             digest.to_hex()
         );
-        rpc_client::node_rpc_client()
+        Ok(rpc_client::node_rpc_client()
             .request_block_by_digest(&digest.to_hex())
-            .await
+            .await?
+            .map(|rpc_block| rpc_block.to_block()))
     }
 
     pub async fn reset_to_height(&self, height: u64) -> Result<()> {
@@ -284,7 +293,7 @@ pub async fn generate_snapshot(dir: &PathBuf, network: Network, range: Range<u64
             .get_block_by_height(height)
             .await?
             .context("block not found")?;
-        let mut buffer = bincode::serialize(&block)?;
+        let mut buffer = bincode::serialize(&RpcBlock::from_block(block))?;
         block_sizes.push(buffer.len());
         blocks.append(&mut buffer);
     }
@@ -350,7 +359,7 @@ impl SnapshotReader {
         Ok(Self { snapshots })
     }
 
-    async fn read_blocks(&self, network: Network, range: Range<u64>) -> Option<Vec<Block>> {
+    async fn read_blocks(&self, network: Network, range: Range<u64>) -> Option<Vec<RpcBlock>> {
         for metadata in &self.snapshots {
             if metadata.network == SnapshotNetwork(network) && metadata.contains_block(range) {
                 debug!(
@@ -377,7 +386,7 @@ impl SnapshotReader {
     async fn read_block_from_snapshot(
         metadata: &SnapshotMetadata,
         range: Range<u64>,
-    ) -> Result<Vec<Block>> {
+    ) -> Result<Vec<RpcBlock>> {
         let mut file = File::open(&metadata.path)
             .await
             .context("open snapshot file")?;
@@ -410,7 +419,7 @@ impl SnapshotReader {
         file: &mut File,
         dict: Arc<Vec<u8>>,
         height: u64,
-    ) -> Result<Block> {
+    ) -> Result<RpcBlock> {
         let pos = Self::block_position(file, height)
             .await
             .context("get block position")?;
@@ -423,23 +432,23 @@ impl SnapshotReader {
             .await
             .context("read compressed block")?;
 
-        let block = tokio::task::spawn_blocking(move || -> Result<Block> {
+        let block = tokio::task::spawn_blocking(move || -> Result<RpcBlock> {
             let mut decoder =
                 zstd::Decoder::with_dictionary(&buffer[..], &dict).context("create decoder")?;
 
             let mut decoded = Vec::new();
             decoder.read_to_end(&mut decoded).context("decode block")?;
-            let block = bincode::deserialize::<Block>(&decoded).context("deserialize block")?;
+            let block = bincode::deserialize::<RpcBlock>(&decoded).context("deserialize block")?;
             Ok(block)
         })
         .await??;
 
-        if Into::<u64>::into(block.header().height) == height {
+        if Into::<u64>::into(block.block.header().height) == height {
             Ok(block)
         } else {
             bail!(
                 "block height mismatch, {},{}",
-                Into::<u64>::into(block.header().height),
+                Into::<u64>::into(block.block.header().height),
                 height
             )
         }

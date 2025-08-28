@@ -74,10 +74,11 @@ impl super::WalletState {
         let (tx_inputs, db_ids, tip_digest) = self
             .create_input(&outputs, fee, rule, must_include_utxos)
             .await?;
-        let tip = rpc_client::node_rpc_client()
+        let tip: Block = rpc_client::node_rpc_client()
             .request_block_by_digest(&tip_digest.to_hex())
             .await?
-            .context(format!("tip block not found: {}", tip_digest.to_hex()))?;
+            .context(format!("tip block not found: {}", tip_digest.to_hex()))?
+            .to_block();
 
         let tx_outputs = self
             .generate_tx_outputs(

@@ -17,6 +17,8 @@ use sqlx::prelude::*;
 use sqlx_migrator::{Info, Migrate, Migrator, Plan};
 use strum::IntoEnumIterator;
 
+use crate::rpc_client::RpcBlock;
+
 struct CreateBlockCacheMigration;
 
 sqlx_migrator::sqlite_migration!(
@@ -153,7 +155,7 @@ impl PersistBlockCache {
         }
     }
 
-    async fn read_block_by_pos(&self, height: u64, pos: i64, length: i64) -> Result<Block> {
+    async fn read_block_by_pos(&self, height: u64, pos: i64, length: i64) -> Result<RpcBlock> {
         let block_file = self.block_path(height);
         let mut file = std::fs::OpenOptions::new()
             .read(true)
@@ -164,7 +166,7 @@ impl PersistBlockCache {
         let mut buffer = vec![0u8; length as usize];
         file.read_exact(&mut buffer)
             .map_err(|err| anyhow::anyhow!("Could not read block from file: {err}"))?;
-        let block: Block = decode_block(&buffer)
+        let block: RpcBlock = decode_block(&buffer)
             .map_err(|err| anyhow::anyhow!("Could not deserialize block: {err}"))?;
         Ok(block)
     }
@@ -263,7 +265,7 @@ impl BlockCache for PersistBlockCache {
             return Ok(()); // Block already exists
         }
 
-        let block_serialized = encode_block(&block)?;
+        let block_serialized = encode_block(&RpcBlock::from_block(block))?;
         let block_path = self.block_path(height);
 
         let mut file = std::fs::OpenOptions::new()
@@ -293,14 +295,14 @@ impl BlockCache for PersistBlockCache {
 
         Ok(())
     }
-    async fn add_blocks(&self, blocks: Vec<Block>) -> Result<()> {
+    async fn add_blocks<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()> {
         for block in blocks {
             self.add_block(block).await?;
         }
         Ok(())
     }
 
-    async fn add_blocks_temp(&self, blocks: Vec<Block>) -> Result<()> {
+    async fn add_blocks_temp<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()> {
         self.memory_cache.add_blocks_temp(blocks).await
     }
 
@@ -334,7 +336,11 @@ impl BlockCache for PersistBlockCache {
             None => return Ok(None),
         };
 
-        Ok(Some(self.read_block_by_pos(height, pos, length).await?))
+        Ok(Some(
+            self.read_block_by_pos(height, pos, length)
+                .await
+                .map(|v| v.to_block())?,
+        ))
     }
 
     async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<Block>> {
@@ -348,7 +354,9 @@ impl BlockCache for PersistBlockCache {
         };
 
         Ok(Some(
-            self.read_block_by_pos(height as u64, pos, length).await?,
+            self.read_block_by_pos(height as u64, pos, length)
+                .await
+                .map(|v| v.to_block())?,
         ))
     }
 }
@@ -378,11 +386,11 @@ impl BlockCache for MemoryBlockCache {
         Ok(())
     }
 
-    async fn add_blocks_temp(&self, blocks: Vec<Block>) -> Result<()> {
+    async fn add_blocks_temp<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()> {
         self.add_blocks(blocks).await
     }
 
-    async fn add_blocks(&self, blocks: Vec<Block>) -> Result<()> {
+    async fn add_blocks<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()> {
         let mut cache = self.cache.lock().await;
         for block in blocks {
             cache.push_back(block);
@@ -426,8 +434,8 @@ impl BlockCache for MemoryBlockCache {
 #[enum_dispatch(BlockCacheImpl)]
 pub(super) trait BlockCache {
     async fn add_block(&self, block: Block) -> Result<()>;
-    async fn add_blocks(&self, blocks: Vec<Block>) -> Result<()>;
-    async fn add_blocks_temp(&self, blocks: Vec<Block>) -> Result<()>;
+    async fn add_blocks<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()>;
+    async fn add_blocks_temp<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()>;
     async fn has_block_by_height(&self, height: u64) -> Result<bool>;
     async fn get_block_by_height(&self, height: u64) -> Result<Option<Block>>;
     async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<Block>>;
@@ -460,7 +468,7 @@ impl BlockCacheImpl {
     }
 }
 
-fn encode_block(block: &Block) -> Result<Vec<u8>> {
+fn encode_block(block: &RpcBlock) -> Result<Vec<u8>> {
     let block_serialized = bincode::serialize(&block)
         .map_err(|err| anyhow::anyhow!("Could not serialize block: {err}"))?;
     let mut buffer = vec![];
@@ -470,7 +478,7 @@ fn encode_block(block: &Block) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-fn decode_block(block_bytes: &[u8]) -> Result<Block> {
+fn decode_block(block_bytes: &[u8]) -> Result<RpcBlock> {
     let mut decoder = zstd::Decoder::with_dictionary(block_bytes, ZSTD_DICT)?;
     let mut decoded = Vec::new();
     decoder
