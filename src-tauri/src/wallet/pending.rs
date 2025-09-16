@@ -1,18 +1,21 @@
-use crate::rpc_client;
-use anyhow::{Context, Result};
-use neptune_cash::models::{
-    blockchain::block::Block,
-    proof_abstractions::timestamp::Timestamp,
-    state::{
-        transaction_details::TransactionDetails, tx_proving_capability::TxProvingCapability,
-        wallet::expected_utxo::UtxoNotifier,
-    },
-};
-use sqlx::{Row, SqliteConnection, SqlitePool};
-use sqlx_migrator::{Info, Migrate, Migrator, Plan};
+use anyhow::Context;
+use anyhow::Result;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::api::export::TransactionDetails;
+use neptune_cash::api::export::TxProvingCapability;
+use neptune_cash::protocol::consensus::block::Block;
+use neptune_cash::state::wallet::expected_utxo::UtxoNotifier;
+use sqlx::Row;
+use sqlx::SqliteConnection;
+use sqlx::SqlitePool;
+use sqlx_migrator::Info;
+use sqlx_migrator::Migrate;
+use sqlx_migrator::Migrator;
+use sqlx_migrator::Plan;
 use tracing::*;
 
 use super::WalletState;
+use crate::rpc_client;
 
 impl super::WalletState {
     // txid, amount
@@ -156,9 +159,10 @@ impl TransactionUpdater {
 
         let block_height = tip.header().height;
         for tx_output in tx_outputs.iter_mut() {
-            tx_output.sender_randomness = wallet_state
+            let new_sender_randomness = wallet_state
                 .key
-                .generate_sender_randomness(block_height, tx_output.receiver_digest);
+                .generate_sender_randomness(block_height, tx_output.receiver_digest());
+            tx_output.set_sender_randomness(new_sender_randomness);
         }
 
         let expected_utxo = wallet_state.extract_expected_utxos(&tx_outputs, UtxoNotifier::Myself);

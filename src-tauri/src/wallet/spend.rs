@@ -1,38 +1,34 @@
 use anyhow::Context;
 use itertools::Itertools;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::api::export::TransactionDetails;
 use neptune_cash::api::export::TransactionProof;
-use neptune_cash::models::state::wallet::utxo_notification::UtxoNotifyMethod;
-use neptune_cash::{
-    models::{
-        blockchain::{
-            block::{block_height::BlockHeight, Block},
-            transaction::{primitive_witness::PrimitiveWitness, utxo::Utxo, Transaction},
-            type_scripts::native_currency_amount::NativeCurrencyAmount,
-        },
-        proof_abstractions::timestamp::Timestamp,
-        state::{
-            transaction_details::TransactionDetails,
-            tx_proving_capability::TxProvingCapability,
-            wallet::{
-                address::{ReceivingAddress, SpendingKey},
-                expected_utxo::{ExpectedUtxo, UtxoNotifier},
-                transaction_output::{TxOutput, TxOutputList},
-                unlocked_utxo::UnlockedUtxo,
-                utxo_notification::UtxoNotificationMedium,
-            },
-        },
-    },
-    prelude::tasm_lib::prelude::Digest,
-};
+use neptune_cash::api::export::TxProvingCapability;
+use neptune_cash::prelude::tasm_lib::prelude::Digest;
+use neptune_cash::protocol::consensus::block::block_height::BlockHeight;
+use neptune_cash::protocol::consensus::block::Block;
+use neptune_cash::protocol::consensus::transaction::primitive_witness::PrimitiveWitness;
+use neptune_cash::protocol::consensus::transaction::utxo::Utxo;
+use neptune_cash::protocol::consensus::transaction::Transaction;
+use neptune_cash::protocol::consensus::type_scripts::native_currency_amount::NativeCurrencyAmount;
+use neptune_cash::state::wallet::address::ReceivingAddress;
+use neptune_cash::state::wallet::address::SpendingKey;
+use neptune_cash::state::wallet::expected_utxo::ExpectedUtxo;
+use neptune_cash::state::wallet::expected_utxo::UtxoNotifier;
+use neptune_cash::state::wallet::transaction_output::TxOutput;
+use neptune_cash::state::wallet::transaction_output::TxOutputList;
+use neptune_cash::state::wallet::unlocked_utxo::UnlockedUtxo;
+use neptune_cash::state::wallet::utxo_notification::UtxoNotificationMedium;
+use neptune_cash::state::wallet::utxo_notification::UtxoNotificationMethod;
 use num_traits::CheckedSub;
 use thiserror::Error;
 use tracing::*;
 
-use crate::prover::ProofBuilder;
-use crate::rpc_client::BroadcastError;
-use crate::{rpc_client, wallet::wallet_state_table::ExpectedUtxoData};
-
 use super::input::InputSelectionRule;
+use crate::prover::ProofBuilder;
+use crate::rpc_client;
+use crate::rpc_client::BroadcastError;
+use crate::wallet::wallet_state_table::ExpectedUtxoData;
 
 impl super::WalletState {
     pub async fn send_to_address(
@@ -212,13 +208,13 @@ impl super::WalletState {
         let receiver_digest = address.privacy_digest();
         let notification_method = if has_matching_spending_key {
             match owned_utxo_notify_medium {
-                UtxoNotificationMedium::OnChain => UtxoNotifyMethod::OnChain(address),
-                UtxoNotificationMedium::OffChain => UtxoNotifyMethod::OffChain(address),
+                UtxoNotificationMedium::OnChain => UtxoNotificationMethod::OnChain(address),
+                UtxoNotificationMedium::OffChain => UtxoNotificationMethod::OffChain(address),
             }
         } else {
             match unowned_utxo_notify_medium {
-                UtxoNotificationMedium::OnChain => UtxoNotifyMethod::OnChain(address),
-                UtxoNotificationMedium::OffChain => UtxoNotifyMethod::OffChain(address),
+                UtxoNotificationMedium::OnChain => UtxoNotificationMethod::OnChain(address),
+                UtxoNotificationMedium::OffChain => UtxoNotificationMethod::OffChain(address),
             }
         };
 
@@ -422,7 +418,7 @@ impl super::WalletState {
             .map(|(tx_output, spending_key)| {
                 ExpectedUtxo::new(
                     tx_output.utxo(),
-                    tx_output.sender_randomness,
+                    tx_output.sender_randomness(),
                     spending_key.privacy_preimage(),
                     notifier,
                 )

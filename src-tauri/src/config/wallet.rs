@@ -1,14 +1,13 @@
-use super::Config;
 use anyhow::Result;
-use neptune_cash::{
-    api::export::SpendingKey,
-    config_models::network::Network,
-    models::state::wallet::{
-        secret_key_material::SecretKeyMaterial, wallet_entropy::WalletEntropy,
-    },
-};
-use serde::{Deserialize, Serialize};
+use neptune_cash::api::export::Network;
+use neptune_cash::api::export::SpendingKey;
+use neptune_cash::state::wallet::secret_key_material::SecretKeyMaterial;
+use neptune_cash::state::wallet::wallet_entropy::WalletEntropy;
+use serde::Deserialize;
+use serde::Serialize;
 use sqlx::Row;
+
+use super::Config;
 
 impl Config {
     pub async fn get_current_wallet(&self) -> Result<WalletConfig> {

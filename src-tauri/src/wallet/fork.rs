@@ -1,5 +1,8 @@
-use anyhow::{anyhow, Context, Result};
-use neptune_cash::{models::blockchain::block::Block, prelude::tasm_lib::prelude::Digest};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
+use neptune_cash::prelude::tasm_lib::prelude::Digest;
+use neptune_cash::protocol::consensus::block::Block;
 use tracing::debug;
 
 use crate::rpc_client;

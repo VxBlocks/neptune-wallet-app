@@ -1,24 +1,22 @@
-use anyhow::{ensure, Context, Result};
-use neptune_cash::{
-    models::{
-        blockchain::{
-            shared::Hash, transaction::utxo::Utxo,
-            type_scripts::native_currency_amount::NativeCurrencyAmount,
-        },
-        proof_abstractions::timestamp::Timestamp,
-        state::wallet::{
-            address::{ReceivingAddress, SpendingKey},
-            unlocked_utxo::UnlockedUtxo,
-        },
-    },
-    prelude::tasm_lib::prelude::Digest,
-    util_types::mutator_set::{get_swbf_indices, ms_membership_proof::MsMembershipProof},
-};
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Result;
+use neptune_cash::api::export::NativeCurrencyAmount;
+use neptune_cash::api::export::ReceivingAddress;
+use neptune_cash::api::export::SpendingKey;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::api::export::Tip5;
+use neptune_cash::api::export::Utxo;
+use neptune_cash::prelude::tasm_lib::prelude::Digest;
+use neptune_cash::state::wallet::unlocked_utxo::UnlockedUtxo;
+use neptune_cash::util_types::mutator_set::archival_mutator_set::RequestMsMembershipProofEx;
+use neptune_cash::util_types::mutator_set::ms_membership_proof::MsMembershipProof;
+use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
 use rand::seq::SliceRandom;
 
+use super::wallet_state_table::UtxoDbData;
+use super::UtxoRecoveryData;
 use crate::rpc_client;
-
-use super::{wallet_state_table::UtxoDbData, UtxoRecoveryData};
 
 pub enum InputSelectionRule {
     Minimum,
@@ -145,16 +143,16 @@ impl super::WalletState {
         let mut rpc_params = Vec::with_capacity(utxos.len());
 
         for utxo in &utxos {
-            let digest = Hash::hash(&utxo.utxo);
-            let swbf_indices = get_swbf_indices(
-                digest,
+            let item = Tip5::hash(&utxo.utxo);
+            let swbf_indices = AbsoluteIndexSet::compute(
+                item,
                 utxo.sender_randomness,
                 utxo.receiver_preimage,
                 utxo.aocl_index,
             );
             let aocl_leaf_index = utxo.aocl_index;
 
-            let param = rpc_client::RequestMsMembershipProofEx {
+            let param = RequestMsMembershipProofEx {
                 swbf_indices: swbf_indices.to_vec(),
                 aocl_leaf_index,
             };
@@ -198,7 +196,7 @@ impl super::WalletState {
     }
 
     pub async fn get_recovery_data_from_utxo(&self, utxo: &Utxo) -> Result<UtxoRecoveryData> {
-        let digest = Hash::hash(utxo);
+        let digest = Tip5::hash(utxo);
         let db_data = self.get_utxo_db_data(&digest).await?;
         match db_data {
             Some(db_data) => Ok(db_data.recovery_data),

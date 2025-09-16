@@ -75,7 +75,7 @@ export const startRunRpcServer = createAsyncThunk<
             await run_rpc_server();
             startRpcServer = true;
         } catch (error) {
-            console.log(error); 
+            console.log(error);
             if (error == "error start rpc: rpc server is already running") {
                 startRpcServer = true
             }
@@ -83,7 +83,7 @@ export const startRunRpcServer = createAsyncThunk<
 
         return { data: startRpcServer };
     }
-)  
+)
 export const {
 } = authSlice.actions;
 

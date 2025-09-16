@@ -1,42 +1,41 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    ptr::null_mut,
-    range::Range,
-    sync::atomic::{AtomicPtr, AtomicU64, Ordering},
-};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::ptr::null_mut;
+use std::range::Range;
+use std::sync::atomic::AtomicPtr;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use itertools::Itertools;
-use neptune_cash::{
-    config_models::{data_directory::DataDirectory, network::Network},
-    models::{
-        blockchain::{
-            block::{mutator_set_update::MutatorSetUpdate, Block},
-            shared::Hash,
-            transaction::utxo::Utxo,
-        },
-        proof_abstractions::mast_hash::MastHash,
-        state::wallet::{incoming_utxo::IncomingUtxo, wallet_entropy::WalletEntropy},
-    },
-    prelude::tasm_lib::prelude::Digest,
-    util_types::mutator_set::{
-        mutator_set_accumulator::MutatorSetAccumulator,
-        removal_record::{AbsoluteIndexSet, RemovalRecord},
-    },
-};
+use neptune_cash::api::export::Network;
+use neptune_cash::api::export::Tip5;
+use neptune_cash::api::export::Utxo;
+use neptune_cash::application::config::data_directory::DataDirectory;
+use neptune_cash::prelude::tasm_lib::prelude::Digest;
+use neptune_cash::protocol::consensus::block::mutator_set_update::MutatorSetUpdate;
+use neptune_cash::protocol::consensus::block::Block;
+use neptune_cash::protocol::proof_abstractions::mast_hash::MastHash;
+use neptune_cash::state::wallet::incoming_utxo::IncomingUtxo;
+use neptune_cash::state::wallet::wallet_entropy::WalletEntropy;
+use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
+use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
+use neptune_cash::util_types::mutator_set::removal_record::RemovalRecord;
 use pending::TransactionUpdater;
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
-use sqlx::{Pool, Sqlite};
+use serde::Deserialize;
+use serde::Serialize;
+use sqlx::Pool;
+use sqlx::Sqlite;
 use tracing::*;
 use wallet_file::wallet_dir_by_id;
-use wallet_state_table::{UtxoBlockInfo, UtxoDbData};
+use wallet_state_table::UtxoBlockInfo;
+use wallet_state_table::UtxoDbData;
 
-use crate::config::{
-    wallet::{ScanConfig, WalletConfig},
-    Config,
-};
+use crate::config::wallet::ScanConfig;
+use crate::config::wallet::WalletConfig;
+use crate::config::Config;
 
 // mod archive_state;
 pub mod balance;
@@ -212,8 +211,8 @@ impl WalletState {
                 );
                 recovery_datas.push(r);
 
-                if incoming_utxo.is_guesser_fee {
-                    gusser_preimage = Some(incoming_utxo.receiver_preimage);
+                if incoming_utxo.is_guesser_fee() {
+                    gusser_preimage = Some(incoming_utxo.receiver_preimage());
                 }
             }
 
@@ -229,7 +228,7 @@ impl WalletState {
         debug!("append utxos");
         let mut db_datas = vec![];
         for recovery_data in recovery_datas {
-            let digest = Hash::hash(&recovery_data.utxo);
+            let digest = Tip5::hash(&recovery_data.utxo);
             let db_data = UtxoDbData {
                 id: 0,
                 hash: digest.to_hex(),
@@ -279,7 +278,7 @@ impl WalletState {
             .await?
             .into_iter()
             .map(|(recovery, txid)| {
-                let digest = Hash::hash(&recovery.utxo);
+                let digest = Tip5::hash(recovery.utxo());
                 (digest, txid)
             })
             .collect_vec();
@@ -306,72 +305,6 @@ impl WalletState {
 
         info!("sync finished: {}", height);
         Ok(None)
-    }
-
-    #[allow(unused)]
-    async fn scan_for_incoming_utxo(&self, block: &Block) -> anyhow::Result<Vec<IncomingUtxo>> {
-        let transactions = &block.body().transaction_kernel();
-
-        let mut utxos: Vec<IncomingUtxo> = Vec::new();
-        let spendingkeys = self.get_future_generation_spending_keys(Range {
-            start: 0,
-            end: self.num_generation_spending_keys() + self.num_future_keys(),
-        });
-
-        let mut max_spending_key = 0u64;
-        spendingkeys.iter().for_each(|spendingkey| {
-            let utxo = spendingkey.1.scan_for_announced_utxos(&transactions);
-
-            for utxo in utxo {
-                utxos.push(utxo);
-                max_spending_key = max_spending_key.max(spendingkey.0);
-            }
-        });
-
-        let symmetric_keys = self.get_future_symmetric_keys(Range {
-            start: 0,
-            end: self.num_symmetric_keys() + self.num_future_keys(),
-        });
-
-        let mut max_symmetric_key = 0u64;
-        symmetric_keys.iter().for_each(|spendingkey| {
-            let utxo = spendingkey.1.scan_for_announced_utxos(&transactions);
-            for utxo in utxo {
-                utxos.push(utxo);
-                max_symmetric_key = max_symmetric_key.max(spendingkey.0);
-            }
-        });
-
-        if self.num_symmetric_keys.load(Ordering::Relaxed) < max_symmetric_key {
-            self.set_num_symmetric_keys(max_symmetric_key).await?;
-        }
-
-        if self.num_generation_spending_keys.load(Ordering::Relaxed) < max_spending_key {
-            self.set_num_generation_spending_keys(max_spending_key)
-                .await?;
-        }
-
-        let receiver_preimage = self.key.prover_fee_address().privacy_digest();
-        let gusser_incoming_utxos =
-            if block.header().guesser_receiver_data.receiver_digest == receiver_preimage {
-                let sender_randomness = block.hash();
-                block
-                    .guesser_fee_utxos()?
-                    .into_iter()
-                    .map(|utxo| IncomingUtxo {
-                        utxo,
-                        sender_randomness,
-                        receiver_preimage,
-                        is_guesser_fee: true,
-                    })
-                    .collect_vec()
-            } else {
-                vec![]
-            };
-
-        utxos.extend(gusser_incoming_utxos);
-
-        Ok(utxos)
     }
 
     async fn par_scan_for_incoming_utxo(&self, block: &Block) -> anyhow::Result<Vec<IncomingUtxo>> {
@@ -422,11 +355,13 @@ impl WalletState {
                 .guesser_fee_utxos()
                 .expect("Block argument must have guesser fee UTXOs")
                 .into_iter()
-                .map(|utxo| IncomingUtxo {
-                    utxo,
-                    sender_randomness,
-                    receiver_preimage: own_guesser_key.receiver_preimage(),
-                    is_guesser_fee: true,
+                .map(|utxo| {
+                    IncomingUtxo::new(
+                        utxo,
+                        sender_randomness,
+                        own_guesser_key.receiver_preimage(),
+                        true,
+                    )
                 })
                 .collect_vec()
         } else {
@@ -508,7 +443,7 @@ pub struct UtxoRecoveryData {
 
 impl UtxoRecoveryData {
     pub fn abs_i(&self) -> AbsoluteIndexSet {
-        let utxo_digest = Hash::hash(&self.utxo);
+        let utxo_digest = Tip5::hash(&self.utxo);
 
         AbsoluteIndexSet::compute(
             utxo_digest,
@@ -523,16 +458,19 @@ fn incoming_utxo_recovery_data_from_incomming_utxo(
     utxo: IncomingUtxo,
     msa_state: &MutatorSetAccumulator,
 ) -> UtxoRecoveryData {
-    let utxo_digest = Hash::hash(&utxo.utxo);
-    let new_own_membership_proof =
-        msa_state.prove(utxo_digest, utxo.sender_randomness, utxo.receiver_preimage);
+    let utxo_digest = Tip5::hash(utxo.utxo());
+    let new_own_membership_proof = msa_state.prove(
+        utxo_digest,
+        utxo.sender_randomness(),
+        utxo.receiver_preimage(),
+    );
 
     let aocl_index = new_own_membership_proof.aocl_leaf_index;
 
     UtxoRecoveryData {
-        utxo: utxo.utxo,
-        sender_randomness: utxo.sender_randomness,
-        receiver_preimage: utxo.receiver_preimage,
+        utxo: utxo.utxo().to_owned(),
+        sender_randomness: utxo.sender_randomness(),
+        receiver_preimage: utxo.receiver_preimage(),
         aocl_index,
     }
 }

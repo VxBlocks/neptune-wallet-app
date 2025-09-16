@@ -1,13 +1,15 @@
-use std::{path::PathBuf, sync::Arc};
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Parser;
-use neptune_cash::config_models::{data_directory::DataDirectory, network::Network};
+use neptune_cash::config_models::data_directory::DataDirectory;
+use neptune_cash::config_models::network::Network;
 
-use crate::{
-    rpc::{client::RestRpcClient, Output, SendToAddressParams},
-    wallet::fake_archival_state::generate_snapshot,
-};
+use crate::rpc::client::RestRpcClient;
+use crate::rpc::Output;
+use crate::rpc::SendToAddressParams;
+use crate::wallet::fake_archival_state::generate_snapshot;
 #[derive(Parser)]
 enum WalletCli {
     RUN(RunArgs),
@@ -87,6 +89,7 @@ pub async fn run() {
 
 async fn run_server(args: RunArgs) -> Result<()> {
     let data_dir = DataDirectory::get(args.global.data_dir, Network::Main)?.root_dir_path();
+    info!("data_dir: {}", data_dir.to_string_lossy());
     let config = crate::config::Config::new(&data_dir).await.unwrap();
     let config = Arc::new(config);
 

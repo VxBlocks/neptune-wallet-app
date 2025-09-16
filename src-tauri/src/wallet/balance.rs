@@ -1,9 +1,8 @@
 use anyhow::Result;
-use neptune_cash::models::{
-    blockchain::type_scripts::native_currency_amount::NativeCurrencyAmount,
-    proof_abstractions::timestamp::Timestamp,
-};
-use serde::{Deserialize, Serialize};
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::protocol::consensus::type_scripts::native_currency_amount::NativeCurrencyAmount;
+use serde::Deserialize;
+use serde::Serialize;
 
 impl super::WalletState {
     pub async fn get_balance(&self) -> Result<NativeCurrencyAmount> {

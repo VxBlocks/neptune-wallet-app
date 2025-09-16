@@ -28,7 +28,7 @@ export default function CreatePassword(props: Props) {
         }
     }, [createPassword]);
 
-    async function createPassword() { 
+    async function createPassword() {
         try {
             let name = "Account 1"
             dispatch(setOneTimePassword(password));

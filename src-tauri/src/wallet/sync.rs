@@ -1,29 +1,26 @@
-use anyhow::{Context, Result};
-use neptune_cash::{
-    models::{blockchain::block::Block, proof_abstractions::timestamp::Timestamp},
-    util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator,
-};
+use std::sync::atomic::AtomicI8;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+
+use anyhow::Context;
+use anyhow::Result;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::protocol::consensus::block::Block;
+use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
 use serde::Serialize;
-use std::{
-    sync::{
-        atomic::{AtomicI8, AtomicU64, Ordering},
-        Arc,
-    },
-    time::Duration,
-};
-use tokio::{
-    select,
-    sync::{Mutex, Notify},
-    task::JoinHandle,
-};
+use tokio::select;
+use tokio::sync::Mutex;
+use tokio::sync::Notify;
+use tokio::task::JoinHandle;
 use tracing::*;
 
-use crate::{config::Config, wallet::block_cache::BlockCacheImpl};
-
-use super::{
-    fake_archival_state::{FakeArchivalState, SnapshotReader},
-    WalletState,
-};
+use super::fake_archival_state::FakeArchivalState;
+use super::fake_archival_state::SnapshotReader;
+use super::WalletState;
+use crate::config::Config;
+use crate::wallet::block_cache::BlockCacheImpl;
 
 const SYNC_STOPPED: i8 = 0;
 const SYNC_SYNCING: i8 = 1;

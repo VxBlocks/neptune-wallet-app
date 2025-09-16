@@ -1,11 +1,10 @@
-use std::{
-    ops::Deref,
-    range::Range,
-    sync::{atomic::Ordering, Arc},
-};
+use std::ops::Deref;
+use std::range::Range;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 
 use anyhow::Result;
-use neptune_cash::models::state::wallet::address::SpendingKey;
+use neptune_cash::api::export::SpendingKey;
 use rayon::prelude::*;
 
 impl super::WalletState {
