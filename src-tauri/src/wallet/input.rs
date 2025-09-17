@@ -13,6 +13,7 @@ use neptune_cash::util_types::mutator_set::archival_mutator_set::RequestMsMember
 use neptune_cash::util_types::mutator_set::ms_membership_proof::MsMembershipProof;
 use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
 use rand::seq::SliceRandom;
+use tracing::trace;
 
 use super::wallet_state_table::UtxoDbData;
 use super::UtxoRecoveryData;
@@ -78,24 +79,36 @@ impl super::WalletState {
         must_include_inputs: Vec<i64>,
     ) -> anyhow::Result<(Vec<UnlockedUtxo>, Vec<i64>, Digest)> {
         let mut utxos = self.get_unspent_utxos().await?;
+        trace!("Num unspent utxos (not mined): {}", utxos.len());
 
         let pending_utxos = self.updater.get_pending_spent_utxos().await?;
         utxos.retain(|utxo| !pending_utxos.contains(&utxo.id));
+        trace!(
+            "Num unspent utxos (not mined and not in mempool): {}",
+            utxos.len()
+        );
 
         let utxos = rule.apply(utxos);
-        let unspent = utxos
+        let unspent: Vec<_> = utxos
             .into_iter()
-            .filter(|utxo| !must_include_inputs.contains(&utxo.id));
+            .filter(|utxo| !must_include_inputs.contains(&utxo.id))
+            .collect();
+        trace!("Choosing inputs from {} UTXOs", unspent.len());
 
         let total_amount = outputs
             .iter()
             .map(|(_, amount)| amount.to_nau())
             .sum::<i128>()
             + fee.to_nau();
+        trace!(
+            "Total amount required: {}",
+            NativeCurrencyAmount::from_nau(total_amount)
+        );
 
         let inputs = self
             .get_unspent_inputs_with_ids(&must_include_inputs)
             .await?;
+        trace!("Number of preselected inputs: {}", inputs.len());
 
         let mut inputs = inputs
             .into_iter()
@@ -126,8 +139,12 @@ impl super::WalletState {
             db_idxs.push(utxo.id);
         }
 
+        trace!("Selected a total of {} inputs", inputs.len());
         let (inputs, tip_digest) = self.unlock_utxos(inputs).await?;
+        trace!("Managed to unlock {} inputs", inputs.len());
 
+        trace!("Inputs length is: {}", inputs.len());
+        trace!("db_idxs.len() = {}", db_idxs.len());
         ensure!(
             inputs.len() == db_idxs.len(),
             "Inputs and db_idxs must have the same length"
@@ -159,9 +176,11 @@ impl super::WalletState {
             rpc_params.push(param);
         }
 
+        trace!("Requesting {} ms membership proofs", rpc_params.len());
         let proofs = rpc_client::node_rpc_client()
             .restore_msmp(rpc_params)
             .await?;
+        trace!("Received {} ms membership proofs", proofs.proofs.len());
 
         let mut unlocked = Vec::with_capacity(utxos.len());
         for (proof, utxo) in proofs.proofs.into_iter().zip(utxos) {

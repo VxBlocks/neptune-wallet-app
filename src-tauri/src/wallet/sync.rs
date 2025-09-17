@@ -152,6 +152,7 @@ impl SyncState {
 
     async fn sync_inner(&self) -> Result<()> {
         let start = self.wallet.start_height().await?;
+        debug!("start set to: {start}");
 
         let mut previous_mutator_set_accumulator = match start {
             0 => MutatorSetAccumulator::default(),
