@@ -13,9 +13,9 @@ use neptune_cash::api::export::Network;
 use neptune_cash::api::export::Tip5;
 use neptune_cash::api::export::Utxo;
 use neptune_cash::application::config::data_directory::DataDirectory;
+use neptune_cash::application::rest_server::ExportedBlock;
 use neptune_cash::prelude::tasm_lib::prelude::Digest;
 use neptune_cash::protocol::consensus::block::mutator_set_update::MutatorSetUpdate;
-use neptune_cash::protocol::consensus::block::Block;
 use neptune_cash::protocol::proof_abstractions::mast_hash::MastHash;
 use neptune_cash::state::wallet::incoming_utxo::IncomingUtxo;
 use neptune_cash::state::wallet::wallet_entropy::WalletEntropy;
@@ -154,11 +154,11 @@ impl WalletState {
     pub async fn update_new_tip(
         &self,
         previous_mutator_set_accumulator: &MutatorSetAccumulator,
-        block: &Block,
+        block: &ExportedBlock,
         should_update: bool,
     ) -> Result<Option<u64>> {
         let mut msa_state = previous_mutator_set_accumulator.clone();
-        let height: u64 = block.header().height.into();
+        let height: u64 = block.kernel.header.height.into();
 
         let mut tx = self.pool.begin().await?;
 
@@ -182,7 +182,7 @@ impl WalletState {
         let MutatorSetUpdate {
             additions: addition_records,
             removals: removal_records,
-        } = block.mutator_set_update()?;
+        } = block.mutator_set_update();
 
         debug!("get removal_records");
         let mut removal_records = removal_records;
@@ -237,7 +237,7 @@ impl WalletState {
                 confirmed_in_block: UtxoBlockInfo {
                     block_height: height,
                     block_digest: block.hash(),
-                    timestamp: block.header().timestamp,
+                    timestamp: block.kernel.header.timestamp,
                 },
                 spent_height: None,
                 confirm_height: height.try_into()?,
@@ -258,9 +258,9 @@ impl WalletState {
         let spents = self.scan_for_spent_utxos(&block).await?;
 
         let block_info = UtxoBlockInfo {
-            block_height: block.header().height.into(),
+            block_height: block.kernel.header.height.into(),
             block_digest: block.hash(),
-            timestamp: block.header().timestamp,
+            timestamp: block.kernel.header.timestamp,
         };
 
         let spent_updates = spents
@@ -289,10 +289,10 @@ impl WalletState {
 
         debug!(
             "set tip {} {}",
-            block.header().height.value(),
+            block.kernel.header.height.value(),
             block.kernel.mast_hash().to_hex()
         );
-        self.set_tip(&mut *tx, (block.header().height.into(), block.hash()))
+        self.set_tip(&mut *tx, (block.kernel.header.height.into(), block.hash()))
             .await?;
 
         tx.commit().await?;
@@ -307,8 +307,11 @@ impl WalletState {
         Ok(None)
     }
 
-    async fn par_scan_for_incoming_utxo(&self, block: &Block) -> anyhow::Result<Vec<IncomingUtxo>> {
-        let transactions = &block.body().transaction_kernel();
+    async fn par_scan_for_incoming_utxo(
+        &self,
+        block: &ExportedBlock,
+    ) -> anyhow::Result<Vec<IncomingUtxo>> {
+        let transaction = &block.kernel.body.transaction_kernel();
 
         let spendingkeys = self.get_future_generation_spending_keys(Range {
             start: 0,
@@ -316,7 +319,7 @@ impl WalletState {
         });
 
         let spend_to_spendingkeys = spendingkeys.par_iter().flat_map(|spendingkey| {
-            let utxo = spendingkey.1.scan_for_announced_utxos(&transactions);
+            let utxo = spendingkey.1.scan_for_announced_utxos(&transaction);
             if utxo.len() > 0 {
                 self.num_generation_spending_keys
                     .fetch_max(spendingkey.0, Ordering::SeqCst);
@@ -333,7 +336,7 @@ impl WalletState {
         });
 
         let spend_to_symmetrickeys = symmetric_keys.par_iter().flat_map(|spendingkey| {
-            let utxo = spendingkey.1.scan_for_announced_utxos(&transactions);
+            let utxo = spendingkey.1.scan_for_announced_utxos(&transaction);
             if utxo.len() > 0 {
                 self.num_symmetric_keys
                     .fetch_max(spendingkey.0, Ordering::SeqCst);
@@ -346,14 +349,16 @@ impl WalletState {
 
         let own_guesser_key = self.key.guesser_fee_key();
         let was_guessed_by_us = block
-            .header()
-            .was_guessed_by(own_guesser_key.to_address().into());
+            .kernel
+            .header
+            .was_guessed_by(&own_guesser_key.to_address().into());
 
         let gusser_incoming_utxos = if was_guessed_by_us {
             let sender_randomness = block.hash();
             block
+                .kernel
                 .guesser_fee_utxos()
-                .expect("Block argument must have guesser fee UTXOs")
+                .expect("Exported block must have guesser fee UTXOs")
                 .into_iter()
                 .map(|utxo| {
                     IncomingUtxo::new(
@@ -381,10 +386,11 @@ impl WalletState {
     /// Returns a list of tuples (utxo, absolute-index-set, index-into-database).
     async fn scan_for_spent_utxos(
         &self,
-        block: &Block,
+        block: &ExportedBlock,
     ) -> Result<Vec<(Utxo, AbsoluteIndexSet, i64)>> {
         let confirmed_absolute_index_sets = block
-            .body()
+            .kernel
+            .body
             .transaction_kernel()
             .inputs
             .iter()
@@ -408,12 +414,12 @@ impl WalletState {
     // returns IncomingUtxo and
     pub async fn scan_for_expected_utxos(
         &self,
-        block: &Block,
+        block: &ExportedBlock,
     ) -> Result<Vec<(IncomingUtxo, String)>> {
         let MutatorSetUpdate {
             additions: addition_records,
             removals: _removal_records,
-        } = block.mutator_set_update()?;
+        } = block.mutator_set_update();
 
         let expected_utxos = self.expected_utxos().await?;
         let eu_map: HashMap<_, _> = expected_utxos

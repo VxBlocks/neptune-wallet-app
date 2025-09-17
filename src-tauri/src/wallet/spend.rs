@@ -4,9 +4,9 @@ use neptune_cash::api::export::Timestamp;
 use neptune_cash::api::export::TransactionDetails;
 use neptune_cash::api::export::TransactionProof;
 use neptune_cash::api::export::TxProvingCapability;
+use neptune_cash::application::rest_server::ExportedBlock;
 use neptune_cash::prelude::tasm_lib::prelude::Digest;
 use neptune_cash::protocol::consensus::block::block_height::BlockHeight;
-use neptune_cash::protocol::consensus::block::Block;
 use neptune_cash::protocol::consensus::transaction::primitive_witness::PrimitiveWitness;
 use neptune_cash::protocol::consensus::transaction::utxo::Utxo;
 use neptune_cash::protocol::consensus::transaction::Transaction;
@@ -70,18 +70,17 @@ impl super::WalletState {
         let (tx_inputs, db_ids, tip_digest) = self
             .create_input(&outputs, fee, rule, must_include_utxos)
             .await?;
-        let tip: Block = rpc_client::node_rpc_client()
+        let tip: ExportedBlock = rpc_client::node_rpc_client()
             .request_block_by_digest(&tip_digest.to_hex())
             .await?
-            .context(format!("tip block not found: {}", tip_digest.to_hex()))?
-            .to_block();
+            .context(format!("tip block not found: {}", tip_digest.to_hex()))?;
 
         let tx_outputs = self
             .generate_tx_outputs(
                 outputs.clone(),
                 owned_utxo_notification_medium,
                 unowned_utxo_notification_medium,
-                tip.header().height,
+                tip.kernel.header.height,
             )
             .await;
 
@@ -241,9 +240,9 @@ impl super::WalletState {
         fee: NativeCurrencyAmount,
         timestamp: Timestamp,
         prover_capability: TxProvingCapability,
-        tip: &Block,
+        tip: &ExportedBlock,
     ) -> anyhow::Result<(Transaction, TransactionDetails, Option<TxOutput>)> {
-        let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after()?;
+        let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after();
 
         // 1. create/add change output if necessary.
         let total_spend = tx_outputs.total_native_coins() + fee;
@@ -298,14 +297,14 @@ impl super::WalletState {
         change_amount: NativeCurrencyAmount,
         change_key: SpendingKey,
         change_utxo_notify_method: UtxoNotificationMedium,
-        tip: &Block,
+        tip: &ExportedBlock,
     ) -> anyhow::Result<TxOutput> {
         let own_receiving_address = change_key.to_address();
 
         let receiver_digest = own_receiving_address.privacy_digest();
         let change_sender_randomness = {
             self.key
-                .generate_sender_randomness(tip.header().height, receiver_digest)
+                .generate_sender_randomness(tip.kernel.header.height, receiver_digest)
         };
 
         let owned = true;

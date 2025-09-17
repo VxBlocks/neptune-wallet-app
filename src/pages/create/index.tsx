@@ -41,7 +41,7 @@ export default function CreatePage(props: Props) {
                     </Flex>
                     <Space h={16} />
                 </Flex>
-            } 
+            }
 
             <Stepper
                 size="xs" iconSize={24} active={active} onStepClick={setActive}

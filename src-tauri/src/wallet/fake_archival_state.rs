@@ -14,7 +14,6 @@ use anyhow::Result;
 use neptune_cash::api::export::Network;
 use neptune_cash::application::rest_server::ExportedBlock;
 use neptune_cash::prelude::tasm_lib::prelude::Digest;
-use neptune_cash::protocol::consensus::block::Block;
 use serde::Deserialize;
 use serde::Serialize;
 use tokio::fs::File;
@@ -23,7 +22,7 @@ use tokio::io::AsyncSeekExt;
 use tokio::io::AsyncWriteExt;
 use tracing::*;
 
-use crate::rpc_client::{self};
+use crate::rpc_client;
 use crate::wallet::block_cache::BlockCache;
 use crate::wallet::block_cache::BlockCacheImpl;
 
@@ -62,13 +61,15 @@ impl FakeArchivalState {
         let blocks = rpc_client::node_rpc_client()
             .request_block_by_height_range(height, batch_size)
             .await?;
-        self.block_cache
-            .add_blocks(blocks.into_iter().map(|block| block.to_block()))
-            .await?;
+        self.block_cache.add_blocks(blocks.into_iter()).await?;
         Ok(())
     }
 
-    async fn read_block_from_snapshot(&self, height: u64, batch_size: u64) -> Option<Vec<Block>> {
+    async fn read_block_from_snapshot(
+        &self,
+        height: u64,
+        batch_size: u64,
+    ) -> Option<Vec<ExportedBlock>> {
         if let Some(reader) = self.snapshot_reader.as_ref() {
             return reader
                 .read_blocks(self.network, (height..height + batch_size).into())
@@ -77,7 +78,7 @@ impl FakeArchivalState {
         None
     }
 
-    pub async fn get_block_by_height(&self, height: u64) -> Result<Option<Block>> {
+    pub async fn get_block_by_height(&self, height: u64) -> Result<Option<ExportedBlock>> {
         if let Some(block) = self.block_cache.get_block_by_height(height).await? {
             return Ok(Some(block.clone()));
         }
@@ -86,15 +87,15 @@ impl FakeArchivalState {
         let result = rpc_client::node_rpc_client().request_block(height).await?;
         if self.block_cache.is_persist() {
             if let Some(block) = &result {
-                self.block_cache.add_block(block.clone().to_block()).await?;
+                self.block_cache.add_block(block.clone()).await?;
             }
         }
 
-        Ok(result.map(|rpc_block| rpc_block.to_block()))
+        Ok(result)
     }
 
     #[allow(dead_code)]
-    pub async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<Block>> {
+    pub async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<ExportedBlock>> {
         if let Some(block) = self.block_cache.get_block_by_digest(digest).await? {
             return Ok(Some(block.clone()));
         }
@@ -105,8 +106,7 @@ impl FakeArchivalState {
         );
         Ok(rpc_client::node_rpc_client()
             .request_block_by_digest(&digest.to_hex())
-            .await?
-            .map(|rpc_block| rpc_block.to_block()))
+            .await?)
     }
 
     pub async fn reset_to_height(&self, height: u64) -> Result<()> {
@@ -291,9 +291,7 @@ pub async fn generate_snapshot(dir: &PathBuf, network: Network, range: Range<u64
             .await?
             .context("block not found")?;
 
-        let include_block_proof = false;
-        let mut buffer =
-            bincode::serialize(&ExportedBlock::from_block(block, include_block_proof))?;
+        let mut buffer = bincode::serialize(&block)?;
         block_sizes.push(buffer.len());
         blocks.append(&mut buffer);
     }
@@ -359,7 +357,7 @@ impl SnapshotReader {
         Ok(Self { snapshots })
     }
 
-    async fn read_blocks(&self, network: Network, range: Range<u64>) -> Option<Vec<Block>> {
+    async fn read_blocks(&self, network: Network, range: Range<u64>) -> Option<Vec<ExportedBlock>> {
         for metadata in &self.snapshots {
             if metadata.network == SnapshotNetwork(network) && metadata.contains_block(range) {
                 debug!(
@@ -386,7 +384,7 @@ impl SnapshotReader {
     async fn read_block_from_snapshot(
         metadata: &SnapshotMetadata,
         range: Range<u64>,
-    ) -> Result<Vec<Block>> {
+    ) -> Result<Vec<ExportedBlock>> {
         let mut file = File::open(&metadata.path)
             .await
             .context("open snapshot file")?;
@@ -419,7 +417,7 @@ impl SnapshotReader {
         file: &mut File,
         dict: Arc<Vec<u8>>,
         height: u64,
-    ) -> Result<Block> {
+    ) -> Result<ExportedBlock> {
         let pos = Self::block_position(file, height)
             .await
             .context("get block position")?;
@@ -432,23 +430,24 @@ impl SnapshotReader {
             .await
             .context("read compressed block")?;
 
-        let block = tokio::task::spawn_blocking(move || -> Result<Block> {
+        let block = tokio::task::spawn_blocking(move || -> Result<ExportedBlock> {
             let mut decoder =
                 zstd::Decoder::with_dictionary(&buffer[..], &dict).context("create decoder")?;
 
             let mut decoded = Vec::new();
             decoder.read_to_end(&mut decoded).context("decode block")?;
-            let block = bincode::deserialize::<Block>(&decoded).context("deserialize block")?;
+            let block =
+                bincode::deserialize::<ExportedBlock>(&decoded).context("deserialize block")?;
             Ok(block)
         })
         .await??;
 
-        if Into::<u64>::into(block.header().height) == height {
+        if Into::<u64>::into(block.kernel.header.height) == height {
             Ok(block)
         } else {
             bail!(
                 "block height mismatch, {},{}",
-                Into::<u64>::into(block.header().height),
+                Into::<u64>::into(block.kernel.header.height),
                 height
             )
         }
@@ -495,10 +494,10 @@ mod tests {
 
         let block = state.get_block_by_height(104).await.unwrap().unwrap();
 
-        assert_eq!(block.header().height, BlockHeight::from(104));
+        assert_eq!(block.kernel.header.height, BlockHeight::from(104));
 
         let block1 = state.get_block_by_height(5).await.unwrap().unwrap();
-        assert_eq!(block1.header().height, BlockHeight::from(5));
+        assert_eq!(block1.kernel.header.height, BlockHeight::from(5));
 
         let instant = Instant::now();
         state.prepare(201, 100).await.unwrap();
@@ -507,6 +506,6 @@ mod tests {
         assert!(state.prepare(201, 101).await.is_err());
 
         let block300 = state.get_block_by_height(300).await.unwrap().unwrap();
-        assert_eq!(block300.header().height, BlockHeight::from(300));
+        assert_eq!(block300.kernel.header.height, BlockHeight::from(300));
     }
 }

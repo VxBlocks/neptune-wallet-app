@@ -157,12 +157,16 @@ impl SyncState {
             0 => MutatorSetAccumulator::default(),
             1 => Block::genesis(self.wallet.network).mutator_set_accumulator_after()?,
             _ => {
+                let context = format!(
+                    "Prev block does not exist. Could not get block with height {}",
+                    start - 1
+                );
                 let block = self
                     .fake_archival_state
                     .get_block_by_height(start - 1)
                     .await?
-                    .context("prev block do not exists")?;
-                block.mutator_set_accumulator_after()?
+                    .context(context)?;
+                block.mutator_set_accumulator_after()
             }
         };
 
@@ -258,7 +262,7 @@ impl SyncState {
             .context("get block error")?
         {
             Some(block) => {
-                self.syncing_new_tip(block.header().height.into());
+                self.syncing_new_tip(block.kernel.header.height.into());
                 block
             }
             None => {
@@ -281,13 +285,13 @@ impl SyncState {
 
         debug!("get block done: {}", current_height);
 
-        let current_mutator_set_accumulator = current_block.mutator_set_accumulator_after()?;
+        let current_mutator_set_accumulator = current_block.mutator_set_accumulator_after();
 
         debug!("update wallet state with new block: {}", current_height);
 
         let mut should_update = self.updated_to_tip.load(Ordering::Relaxed) == 1;
         if should_update {
-            if (Timestamp::now() - current_block.header().timestamp).as_duration()
+            if (Timestamp::now() - current_block.kernel.header.timestamp).as_duration()
                 > Duration::from_secs(26 * 60)
             {
                 should_update = false
@@ -312,7 +316,7 @@ impl SyncState {
                 .await
                 .context(format!("failed to get block at height: {}", fork))?
                 .context("fork block not found")?;
-            *previous_mutator_set_accumulator = fork_block.mutator_set_accumulator_after()?;
+            *previous_mutator_set_accumulator = fork_block.mutator_set_accumulator_after();
 
             self.update(fork);
             self.fake_archival_state
