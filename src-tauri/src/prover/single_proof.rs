@@ -1,32 +1,32 @@
-use anyhow::{anyhow, bail, ensure, Context, Result};
-use neptune_cash::{
-    api::export::{
-        NativeCurrencyAmount, NeptuneProof, Network, SpendingKey, Timestamp, Transaction,
-        TransactionDetails, TransactionProof,
-    },
-    models::{
-        blockchain::{
-            block::{mutator_set_update::MutatorSetUpdate, Block},
-            transaction::{
-                transaction_kernel::TransactionKernelModifier,
-                validity::{
-                    single_proof::{SingleProof, SingleProofWitness},
-                    tasm::single_proof::{
-                        merge_branch::MergeWitness, update_branch::UpdateWitness,
-                    },
-                },
-            },
-        },
-        proof_abstractions::{tasm::program::ConsensusProgram, SecretWitness},
-        state::wallet::{utxo_notification::UtxoNotifyMethod, wallet_entropy::WalletEntropy},
-    },
-    prelude::{
-        tasm_lib::prelude::Digest,
-        twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof,
-    },
-    util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator,
-};
-use rand::{rng, Rng};
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Result;
+use neptune_cash::api::export::Digest;
+use neptune_cash::api::export::NativeCurrencyAmount;
+use neptune_cash::api::export::NeptuneProof;
+use neptune_cash::api::export::Network;
+use neptune_cash::api::export::SpendingKey;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::api::export::Transaction;
+use neptune_cash::api::export::TransactionDetails;
+use neptune_cash::api::export::TransactionProof;
+use neptune_cash::prelude::twenty_first::util_types::mmr::mmr_successor_proof::MmrSuccessorProof;
+use neptune_cash::protocol::consensus::block::mutator_set_update::MutatorSetUpdate;
+use neptune_cash::protocol::consensus::block::Block;
+use neptune_cash::protocol::consensus::transaction::transaction_kernel::TransactionKernelModifier;
+use neptune_cash::protocol::consensus::transaction::validity::single_proof::SingleProof;
+use neptune_cash::protocol::consensus::transaction::validity::single_proof::SingleProofWitness;
+use neptune_cash::protocol::consensus::transaction::validity::tasm::single_proof::merge_branch::MergeWitness;
+use neptune_cash::protocol::consensus::transaction::validity::tasm::single_proof::update_branch::UpdateWitness;
+use neptune_cash::protocol::proof_abstractions::tasm::program::ConsensusProgram;
+use neptune_cash::protocol::proof_abstractions::SecretWitness;
+use neptune_cash::state::wallet::utxo_notification::UtxoNotificationMethod;
+use neptune_cash::state::wallet::wallet_entropy::WalletEntropy;
+use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
+use rand::rng;
+use rand::Rng;
 use tracing::info;
 
 impl super::ProofBuilder {
@@ -154,7 +154,7 @@ impl super::ProofBuilder {
     fn single_proof_from_witness(witness: &SingleProofWitness) -> Result<NeptuneProof> {
         let claim = witness.claim();
 
-        let proof = Self::produce(SingleProof.program(), claim, witness.nondeterminism())?;
+        let proof = Self::produce(SingleProof.program(), claim, witness.nondeterminism())?.into();
 
         Ok(proof)
     }
@@ -201,14 +201,14 @@ impl super::ProofBuilder {
 
     fn gobbler_notification_method_with_receiver_preimage(
         own_wallet_entropy: &WalletEntropy,
-    ) -> (UtxoNotifyMethod, Digest) {
+    ) -> (UtxoNotificationMethod, Digest) {
         let gobble_beneficiary_key =
             SpendingKey::from(own_wallet_entropy.nth_generation_spending_key(0));
 
         let receiver_preimage = gobble_beneficiary_key.privacy_preimage();
         let gobble_beneficiary_address = gobble_beneficiary_key.to_address();
 
-        let fee_notification_method = UtxoNotifyMethod::OnChain(gobble_beneficiary_address);
+        let fee_notification_method = UtxoNotificationMethod::OnChain(gobble_beneficiary_address);
 
         (fee_notification_method, receiver_preimage)
     }
@@ -230,11 +230,7 @@ impl super::ProofBuilder {
 
         let gobble_shuffle_seed: [u8; 32] = rng().random();
 
-        let merge_witness = MergeWitness::from_transactions(
-            tx1,
-            tx2,
-            gobble_shuffle_seed,
-        );
+        let merge_witness = MergeWitness::from_transactions(tx1, tx2, gobble_shuffle_seed);
 
         let new_kernel = merge_witness.new_kernel.clone();
         let new_single_proof_witness = SingleProofWitness::from_merge(merge_witness);

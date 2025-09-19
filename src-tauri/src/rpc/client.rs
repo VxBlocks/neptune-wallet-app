@@ -1,8 +1,10 @@
 use anyhow::Result;
 
-use crate::{config, wallet::balance::WalletHistory};
+use super::SendResponse;
+use super::SendToAddressParams;
+use crate::config;
+use crate::wallet::balance::WalletHistory;
 
-use super::{SendResponse, SendToAddressParams};
 pub struct RestRpcClient {
     client: reqwest::Client,
 }

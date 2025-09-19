@@ -1,49 +1,49 @@
-use anyhow::{anyhow, Result};
-use axum::{
-    body::Body,
-    extract::{ConnectInfo, Request},
-    http,
-    middleware::{self, Next},
-    response::Response,
-    routing::post,
-    Json,
-};
-use axum::{extract::Path, routing::get};
+use std::net::Ipv4Addr;
+use std::net::SocketAddr;
+use std::net::SocketAddrV4;
+use std::sync::Arc;
+
+use anyhow::anyhow;
+use anyhow::Result;
+use axum::body::Body;
+use axum::extract::ConnectInfo;
+use axum::extract::Path;
+use axum::extract::Request;
+use axum::http;
+use axum::middleware::Next;
+use axum::middleware::{self};
+use axum::response::Response;
+use axum::routing::get;
+use axum::routing::post;
+use axum::Json;
 use axum_extra::response::ErasedJson;
 use block::get_tip_height;
 use error::RestError;
 use http::StatusCode;
-use neptune_cash::models::{
-    blockchain::type_scripts::native_currency_amount::NativeCurrencyAmount,
-    state::wallet::utxo_notification::UtxoNotificationMedium,
-};
-use neptune_cash::models::{
-    proof_abstractions::timestamp::Timestamp, state::wallet::address::ReceivingAddress,
-};
+use neptune_cash::api::export::NativeCurrencyAmount;
+use neptune_cash::api::export::ReceivingAddress;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::state::wallet::utxo_notification::UtxoNotificationMedium;
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
-use std::{
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
-    sync::Arc,
-};
-use tokio::{
-    net::TcpListener,
-    sync::{oneshot::Sender, Mutex},
-    task::JoinHandle,
-};
-use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use serde::Deserialize;
+use serde::Serialize;
+use tokio::net::TcpListener;
+use tokio::sync::oneshot::Sender;
+use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
+use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
 use tracing::*;
-use transaction_status::{forget_tx, get_pending_transaction};
+use transaction_status::forget_tx;
+use transaction_status::get_pending_transaction;
 
-use crate::{
-    config::{consts::RPC_PORT, Config},
-    service::get_state,
-    wallet::{
-        balance::WalletHistory,
-        sync::{SyncState, SyncStatus},
-        InputSelectionRule,
-    },
-};
+use crate::config::consts::RPC_PORT;
+use crate::config::Config;
+use crate::service::get_state;
+use crate::wallet::balance::WalletHistory;
+use crate::wallet::sync::SyncState;
+use crate::wallet::sync::SyncStatus;
+use crate::wallet::InputSelectionRule;
 // mod middleware;
 mod block;
 #[cfg(feature = "cli")]
@@ -176,10 +176,10 @@ pub trait WalletRpc {
             .await
             .map_err(|e| anyhow!("{}", e))?;
 
-        info!("proven tx {}", tx.kernel.txid());
+        info!("proven tx {}", tx.txid());
 
         Ok(SendResponse {
-            txid: tx.kernel.txid().to_string(),
+            txid: tx.txid().to_string(),
             outputs: tx
                 .kernel
                 .outputs

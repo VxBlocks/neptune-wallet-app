@@ -1,23 +1,25 @@
-use std::{
-    collections::LinkedList,
-    io::{Read, Seek, Write},
-    path::PathBuf,
-    range::Range,
-    str::FromStr,
-};
+use std::collections::LinkedList;
+use std::io::Read;
+use std::io::Seek;
+use std::io::Write;
+use std::path::PathBuf;
+use std::range::Range;
+use std::str::FromStr;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
 use enum_dispatch::enum_dispatch;
 use futures::lock::Mutex;
-use neptune_cash::{
-    api::export::Network, models::blockchain::block::Block, prelude::tasm_lib::prelude::Digest,
-};
+use neptune_cash::api::export::Network;
+use neptune_cash::application::rest_server::ExportedBlock;
+use neptune_cash::prelude::tasm_lib::prelude::Digest;
 use serde::Serialize;
 use sqlx::prelude::*;
-use sqlx_migrator::{Info, Migrate, Migrator, Plan};
-use strum::IntoEnumIterator;
-
-use crate::rpc_client::RpcBlock;
+use sqlx_migrator::Info;
+use sqlx_migrator::Migrate;
+use sqlx_migrator::Migrator;
+use sqlx_migrator::Plan;
 
 struct CreateBlockCacheMigration;
 
@@ -59,13 +61,13 @@ impl PersistBlockCache {
     const BLOCK_BATCH_SIZE: u64 = 2000;
     const BLOCK_FILE_EXT: &str = "block";
     pub async fn new(data_dir: &PathBuf, network: Network, cache_size: usize) -> Result<Self> {
-        let block_dir = data_dir.join(format!("{}_blocks", network.to_string()));
+        let block_dir = data_dir.join(format!("{}_block", network.to_string()));
 
         if !block_dir.exists() {
             std::fs::create_dir_all(&block_dir)
                 .map_err(|err| anyhow::anyhow!("Could not create block directory: {err}"))?;
         }
-        let database = block_dir.join("blocks.db");
+        let database = block_dir.join("block.db");
         let pool = {
             let options = sqlx::sqlite::SqliteConnectOptions::new()
                 .filename(database)
@@ -155,7 +157,7 @@ impl PersistBlockCache {
         }
     }
 
-    async fn read_block_by_pos(&self, height: u64, pos: i64, length: i64) -> Result<RpcBlock> {
+    async fn read_block_by_pos(&self, height: u64, pos: i64, length: i64) -> Result<ExportedBlock> {
         let block_file = self.block_path(height);
         let mut file = std::fs::OpenOptions::new()
             .read(true)
@@ -166,7 +168,7 @@ impl PersistBlockCache {
         let mut buffer = vec![0u8; length as usize];
         file.read_exact(&mut buffer)
             .map_err(|err| anyhow::anyhow!("Could not read block from file: {err}"))?;
-        let block: RpcBlock = decode_block(&buffer)
+        let block: ExportedBlock = decode_block(&buffer)
             .map_err(|err| anyhow::anyhow!("Could not deserialize block: {err}"))?;
         Ok(block)
     }
@@ -207,7 +209,13 @@ impl PersistBlockCache {
 
     pub fn list_cache_files(data_dir: &PathBuf) -> Result<Vec<BlockCacheFile>> {
         let mut files = vec![];
-        let dirs = Network::iter().map(|network| {
+        let dirs = [
+            Network::Main,
+            Network::RegTest,
+            Network::TestnetMock,
+            Network::Testnet(0),
+        ]
+        .map(|network| {
             (
                 network.to_string(),
                 format!("{}_blocks", network.to_string()),
@@ -257,15 +265,15 @@ pub struct BlockCacheFile {
 }
 
 impl BlockCache for PersistBlockCache {
-    async fn add_block(&self, block: Block) -> Result<()> {
-        let height: u64 = block.header().height.into();
+    async fn add_block(&self, block: ExportedBlock) -> Result<()> {
+        let height: u64 = block.kernel.header.height.into();
         let hash = block.hash().to_hex();
 
         if self.find_block(height, &hash).await?.is_some() {
             return Ok(()); // Block already exists
         }
 
-        let block_serialized = encode_block(&RpcBlock::from_block(block))?;
+        let block_serialized = encode_block(&block)?;
         let block_path = self.block_path(height);
 
         let mut file = std::fs::OpenOptions::new()
@@ -295,14 +303,14 @@ impl BlockCache for PersistBlockCache {
 
         Ok(())
     }
-    async fn add_blocks<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()> {
+    async fn add_blocks<T: Iterator<Item = ExportedBlock>>(&self, blocks: T) -> Result<()> {
         for block in blocks {
             self.add_block(block).await?;
         }
         Ok(())
     }
 
-    async fn add_blocks_temp<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()> {
+    async fn add_blocks_temp<T: Iterator<Item = ExportedBlock>>(&self, blocks: T) -> Result<()> {
         self.memory_cache.add_blocks_temp(blocks).await
     }
 
@@ -326,7 +334,7 @@ impl BlockCache for PersistBlockCache {
             .map(|opt| opt.is_some())
     }
 
-    async fn get_block_by_height(&self, height: u64) -> Result<Option<Block>> {
+    async fn get_block_by_height(&self, height: u64) -> Result<Option<ExportedBlock>> {
         if let Some(block) = self.memory_cache.get_block_by_height(height).await? {
             return Ok(Some(block));
         }
@@ -336,14 +344,10 @@ impl BlockCache for PersistBlockCache {
             None => return Ok(None),
         };
 
-        Ok(Some(
-            self.read_block_by_pos(height, pos, length)
-                .await
-                .map(|v| v.to_block())?,
-        ))
+        Ok(Some(self.read_block_by_pos(height, pos, length).await?))
     }
 
-    async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<Block>> {
+    async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<ExportedBlock>> {
         if let Some(block) = self.memory_cache.get_block_by_digest(digest).await? {
             return Ok(Some(block));
         }
@@ -354,16 +358,14 @@ impl BlockCache for PersistBlockCache {
         };
 
         Ok(Some(
-            self.read_block_by_pos(height as u64, pos, length)
-                .await
-                .map(|v| v.to_block())?,
+            self.read_block_by_pos(height as u64, pos, length).await?,
         ))
     }
 }
 
 #[derive(Debug)]
 pub struct MemoryBlockCache {
-    cache: Mutex<LinkedList<Block>>,
+    cache: Mutex<LinkedList<ExportedBlock>>,
     size: usize,
 }
 
@@ -377,20 +379,20 @@ impl MemoryBlockCache {
 }
 
 impl BlockCache for MemoryBlockCache {
-    async fn add_block(&self, block: Block) -> Result<()> {
+    async fn add_block(&self, block: ExportedBlock) -> Result<()> {
         let mut cache = self.cache.lock().await;
-        cache.push_back(block);
+        cache.push_back(block.to_owned());
         if cache.len() > self.size {
             cache.pop_front();
         }
         Ok(())
     }
 
-    async fn add_blocks_temp<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()> {
+    async fn add_blocks_temp<T: Iterator<Item = ExportedBlock>>(&self, blocks: T) -> Result<()> {
         self.add_blocks(blocks).await
     }
 
-    async fn add_blocks<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()> {
+    async fn add_blocks<T: Iterator<Item = ExportedBlock>>(&self, blocks: T) -> Result<()> {
         let mut cache = self.cache.lock().await;
         for block in blocks {
             cache.push_back(block);
@@ -403,19 +405,24 @@ impl BlockCache for MemoryBlockCache {
 
     async fn has_block_by_height(&self, height: u64) -> Result<bool> {
         let cache = self.cache.lock().await;
-        Ok(cache.iter().any(|b| b.header().height == height.into()))
+        Ok(cache
+            .iter()
+            .any(|b| b.kernel.header.height == height.into()))
     }
 
-    async fn get_block_by_height(&self, height: u64) -> Result<Option<Block>> {
+    async fn get_block_by_height(&self, height: u64) -> Result<Option<ExportedBlock>> {
         let cache = self.cache.lock().await;
-        if let Some(block) = cache.iter().find(|b| b.header().height == height.into()) {
+        if let Some(block) = cache
+            .iter()
+            .find(|b| b.kernel.header.height == height.into())
+        {
             return Ok(Some(block.clone()));
         };
 
         Ok(None)
     }
 
-    async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<Block>> {
+    async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<ExportedBlock>> {
         let cache = self.cache.lock().await;
         if let Some(block) = cache.iter().find(|b| b.hash() == digest) {
             return Ok(Some(block.clone()));
@@ -426,19 +433,19 @@ impl BlockCache for MemoryBlockCache {
 
     async fn delete_block_by_start_height(&self, start_height: u64) -> Result<()> {
         let mut cache = self.cache.lock().await;
-        cache.retain(|b| b.header().height < start_height.into());
+        cache.retain(|b| b.kernel.header.height < start_height.into());
         Ok(())
     }
 }
 
 #[enum_dispatch(BlockCacheImpl)]
 pub(super) trait BlockCache {
-    async fn add_block(&self, block: Block) -> Result<()>;
-    async fn add_blocks<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()>;
-    async fn add_blocks_temp<T: Iterator<Item = Block>>(&self, blocks: T) -> Result<()>;
+    async fn add_block(&self, block: ExportedBlock) -> Result<()>;
+    async fn add_blocks<T: Iterator<Item = ExportedBlock>>(&self, blocks: T) -> Result<()>;
+    async fn add_blocks_temp<T: Iterator<Item = ExportedBlock>>(&self, blocks: T) -> Result<()>;
     async fn has_block_by_height(&self, height: u64) -> Result<bool>;
-    async fn get_block_by_height(&self, height: u64) -> Result<Option<Block>>;
-    async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<Block>>;
+    async fn get_block_by_height(&self, height: u64) -> Result<Option<ExportedBlock>>;
+    async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<ExportedBlock>>;
     async fn delete_block_by_start_height(&self, start_height: u64) -> Result<()>;
 }
 
@@ -468,8 +475,8 @@ impl BlockCacheImpl {
     }
 }
 
-fn encode_block(block: &RpcBlock) -> Result<Vec<u8>> {
-    let block_serialized = bincode::serialize(&block)
+fn encode_block(block: &ExportedBlock) -> Result<Vec<u8>> {
+    let block_serialized = bincode::serialize(block)
         .map_err(|err| anyhow::anyhow!("Could not serialize block: {err}"))?;
     let mut buffer = vec![];
     let mut encoder = zstd::Encoder::with_dictionary(&mut buffer, 17, ZSTD_DICT)?;
@@ -478,7 +485,7 @@ fn encode_block(block: &RpcBlock) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-fn decode_block(block_bytes: &[u8]) -> Result<RpcBlock> {
+fn decode_block(block_bytes: &[u8]) -> Result<ExportedBlock> {
     let mut decoder = zstd::Decoder::with_dictionary(block_bytes, ZSTD_DICT)?;
     let mut decoded = Vec::new();
     decoder

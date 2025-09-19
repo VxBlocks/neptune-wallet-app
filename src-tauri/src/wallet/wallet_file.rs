@@ -1,12 +1,11 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use neptune_cash::{ config_models::network::Network};
+use neptune_cash::api::export::Network;
 use tracing::*;
 
-use crate::config::Config;
-
 use super::WalletState;
+use crate::config::Config;
 
 pub fn wallet_dir_by_id(data_dir: &PathBuf, network: Network, wallet_id: i64) -> PathBuf {
     data_dir

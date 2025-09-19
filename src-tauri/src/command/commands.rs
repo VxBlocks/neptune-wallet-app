@@ -3,12 +3,14 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
-use neptune_cash::config_models::network::Network;
+use neptune_cash::api::export::Network;
 
-use crate::config::wallet::{ScanConfig, WalletData};
+use crate::config::wallet::ScanConfig;
+use crate::config::wallet::WalletData;
 use crate::config::Config;
 use crate::rpc_client;
-use crate::wallet::block_cache::{BlockCacheFile, PersistBlockCache};
+use crate::wallet::block_cache::BlockCacheFile;
+use crate::wallet::block_cache::PersistBlockCache;
 use crate::wallet::fake_archival_state::generate_snapshot;
 use crate::wallet::sync::SyncState;
 use crate::wallet::wallet_file;

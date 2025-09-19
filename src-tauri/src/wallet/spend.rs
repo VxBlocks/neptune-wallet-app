@@ -1,38 +1,33 @@
-use anyhow::Context;
 use itertools::Itertools;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::api::export::TransactionDetails;
 use neptune_cash::api::export::TransactionProof;
-use neptune_cash::models::state::wallet::utxo_notification::UtxoNotifyMethod;
-use neptune_cash::{
-    models::{
-        blockchain::{
-            block::{block_height::BlockHeight, Block},
-            transaction::{primitive_witness::PrimitiveWitness, utxo::Utxo, Transaction},
-            type_scripts::native_currency_amount::NativeCurrencyAmount,
-        },
-        proof_abstractions::timestamp::Timestamp,
-        state::{
-            transaction_details::TransactionDetails,
-            tx_proving_capability::TxProvingCapability,
-            wallet::{
-                address::{ReceivingAddress, SpendingKey},
-                expected_utxo::{ExpectedUtxo, UtxoNotifier},
-                transaction_output::{TxOutput, TxOutputList},
-                unlocked_utxo::UnlockedUtxo,
-                utxo_notification::UtxoNotificationMedium,
-            },
-        },
-    },
-    prelude::tasm_lib::prelude::Digest,
-};
+use neptune_cash::api::export::TxProvingCapability;
+use neptune_cash::prelude::tasm_lib::prelude::Digest;
+use neptune_cash::protocol::consensus::block::block_height::BlockHeight;
+use neptune_cash::protocol::consensus::transaction::primitive_witness::PrimitiveWitness;
+use neptune_cash::protocol::consensus::transaction::utxo::Utxo;
+use neptune_cash::protocol::consensus::transaction::Transaction;
+use neptune_cash::protocol::consensus::type_scripts::native_currency_amount::NativeCurrencyAmount;
+use neptune_cash::state::wallet::address::ReceivingAddress;
+use neptune_cash::state::wallet::address::SpendingKey;
+use neptune_cash::state::wallet::expected_utxo::ExpectedUtxo;
+use neptune_cash::state::wallet::expected_utxo::UtxoNotifier;
+use neptune_cash::state::wallet::transaction_output::TxOutput;
+use neptune_cash::state::wallet::transaction_output::TxOutputList;
+use neptune_cash::state::wallet::unlocked_utxo::UnlockedUtxo;
+use neptune_cash::state::wallet::utxo_notification::UtxoNotificationMedium;
+use neptune_cash::state::wallet::utxo_notification::UtxoNotificationMethod;
+use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
 use num_traits::CheckedSub;
 use thiserror::Error;
 use tracing::*;
 
-use crate::prover::ProofBuilder;
-use crate::rpc_client::BroadcastError;
-use crate::{rpc_client, wallet::wallet_state_table::ExpectedUtxoData};
-
 use super::input::InputSelectionRule;
+use crate::prover::ProofBuilder;
+use crate::rpc_client;
+use crate::rpc_client::BroadcastError;
+use crate::wallet::wallet_state_table::ExpectedUtxoData;
 
 impl super::WalletState {
     pub async fn send_to_address(
@@ -71,21 +66,16 @@ impl super::WalletState {
             "stmi: step 2. generate outputs.",
         );
 
-        let (tx_inputs, db_ids, tip_digest) = self
+        let (tx_inputs, db_ids, tip_msa, tip_height) = self
             .create_input(&outputs, fee, rule, must_include_utxos)
             .await?;
-        let tip: Block = rpc_client::node_rpc_client()
-            .request_block_by_digest(&tip_digest.to_hex())
-            .await?
-            .context(format!("tip block not found: {}", tip_digest.to_hex()))?
-            .to_block();
 
         let tx_outputs = self
             .generate_tx_outputs(
                 outputs.clone(),
                 owned_utxo_notification_medium,
                 unowned_utxo_notification_medium,
-                tip.header().height,
+                tip_height,
             )
             .await;
 
@@ -102,7 +92,8 @@ impl super::WalletState {
                 fee,
                 now,
                 tx_proving_capability,
-                &tip,
+                tip_msa,
+                tip_height,
             )
             .await
         {
@@ -212,13 +203,13 @@ impl super::WalletState {
         let receiver_digest = address.privacy_digest();
         let notification_method = if has_matching_spending_key {
             match owned_utxo_notify_medium {
-                UtxoNotificationMedium::OnChain => UtxoNotifyMethod::OnChain(address),
-                UtxoNotificationMedium::OffChain => UtxoNotifyMethod::OffChain(address),
+                UtxoNotificationMedium::OnChain => UtxoNotificationMethod::OnChain(address),
+                UtxoNotificationMedium::OffChain => UtxoNotificationMethod::OffChain(address),
             }
         } else {
             match unowned_utxo_notify_medium {
-                UtxoNotificationMedium::OnChain => UtxoNotifyMethod::OnChain(address),
-                UtxoNotificationMedium::OffChain => UtxoNotifyMethod::OffChain(address),
+                UtxoNotificationMedium::OnChain => UtxoNotificationMethod::OnChain(address),
+                UtxoNotificationMedium::OffChain => UtxoNotificationMethod::OffChain(address),
             }
         };
 
@@ -245,10 +236,9 @@ impl super::WalletState {
         fee: NativeCurrencyAmount,
         timestamp: Timestamp,
         prover_capability: TxProvingCapability,
-        tip: &Block,
+        tip_msa: MutatorSetAccumulator,
+        tip_height: BlockHeight,
     ) -> anyhow::Result<(Transaction, TransactionDetails, Option<TxOutput>)> {
-        let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after()?;
-
         // 1. create/add change output if necessary.
         let total_spend = tx_outputs.total_native_coins() + fee;
 
@@ -265,7 +255,7 @@ impl super::WalletState {
             })?;
 
             let change_utxo = self
-                .create_change_output(amount, change_key, change_utxo_notify_medium, tip)
+                .create_change_output(amount, change_key, change_utxo_notify_medium, tip_height)
                 .await?;
             tx_outputs.push(change_utxo.clone());
             maybe_change_output = Some(change_utxo);
@@ -276,7 +266,7 @@ impl super::WalletState {
             tx_outputs.to_owned(),
             fee,
             timestamp,
-            tip_mutator_set_accumulator,
+            tip_msa,
             self.network,
         );
 
@@ -302,14 +292,14 @@ impl super::WalletState {
         change_amount: NativeCurrencyAmount,
         change_key: SpendingKey,
         change_utxo_notify_method: UtxoNotificationMedium,
-        tip: &Block,
+        tip_height: BlockHeight,
     ) -> anyhow::Result<TxOutput> {
         let own_receiving_address = change_key.to_address();
 
         let receiver_digest = own_receiving_address.privacy_digest();
         let change_sender_randomness = {
             self.key
-                .generate_sender_randomness(tip.header().height, receiver_digest)
+                .generate_sender_randomness(tip_height, receiver_digest)
         };
 
         let owned = true;
@@ -422,7 +412,7 @@ impl super::WalletState {
             .map(|(tx_output, spending_key)| {
                 ExpectedUtxo::new(
                     tx_output.utxo(),
-                    tx_output.sender_randomness,
+                    tx_output.sender_randomness(),
                     spending_key.privacy_preimage(),
                     notifier,
                 )

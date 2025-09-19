@@ -1,21 +1,20 @@
 use anyhow::Result;
 use itertools::Itertools;
-use neptune_cash::models::blockchain::shared::Hash;
-use neptune_cash::models::blockchain::transaction::transaction_kernel::TransactionKernelField;
-use neptune_cash::models::blockchain::transaction::validity::collect_lock_scripts::CollectLockScriptsWitness;
-use neptune_cash::models::blockchain::transaction::validity::collect_type_scripts::CollectTypeScriptsWitness;
-use neptune_cash::models::blockchain::transaction::validity::kernel_to_outputs::KernelToOutputsWitness;
-use neptune_cash::models::blockchain::transaction::validity::removal_records_integrity::RemovalRecordsIntegrityWitness;
-use neptune_cash::models::blockchain::transaction::{
-    primitive_witness::PrimitiveWitness, validity::proof_collection::ProofCollection,
-};
-use neptune_cash::models::proof_abstractions::mast_hash::MastHash;
-use neptune_cash::models::proof_abstractions::SecretWitness;
+use neptune_cash::api::export::Tip5;
 use neptune_cash::prelude::tasm_lib;
 use neptune_cash::prelude::triton_vm::vm::PublicInput;
+use neptune_cash::protocol::consensus::transaction::primitive_witness::PrimitiveWitness;
+use neptune_cash::protocol::consensus::transaction::transaction_kernel::TransactionKernelField;
+use neptune_cash::protocol::consensus::transaction::validity::collect_lock_scripts::CollectLockScriptsWitness;
+use neptune_cash::protocol::consensus::transaction::validity::collect_type_scripts::CollectTypeScriptsWitness;
+use neptune_cash::protocol::consensus::transaction::validity::kernel_to_outputs::KernelToOutputsWitness;
+use neptune_cash::protocol::consensus::transaction::validity::proof_collection::ProofCollection;
+use neptune_cash::protocol::consensus::transaction::validity::removal_records_integrity::RemovalRecordsIntegrityWitness;
+use neptune_cash::protocol::proof_abstractions::mast_hash::MastHash;
+use neptune_cash::protocol::proof_abstractions::SecretWitness;
 use tasm_lib::triton_vm::proof::Claim;
-
-use tracing::{debug, info};
+use tracing::debug;
+use tracing::info;
 
 impl super::ProofBuilder {
     pub fn produce_proof_collection(
@@ -30,8 +29,8 @@ impl super::ProofBuilder {
 
         let txk_mast_hash = primitive_witness.kernel.mast_hash();
         let txk_mast_hash_as_input = PublicInput::new(txk_mast_hash.reversed().values().to_vec());
-        let salted_inputs_hash = Hash::hash(&primitive_witness.input_utxos);
-        let salted_outputs_hash = Hash::hash(&primitive_witness.output_utxos);
+        let salted_inputs_hash = Tip5::hash(&primitive_witness.input_utxos);
+        let salted_outputs_hash = Tip5::hash(&primitive_witness.output_utxos);
         debug!("proving, txk hash: {}", txk_mast_hash);
         debug!("proving, salted inputs hash: {}", salted_inputs_hash);
         debug!("proving, salted outputs hash: {}", salted_outputs_hash);
@@ -42,28 +41,32 @@ impl super::ProofBuilder {
             removal_records_integrity_witness.program(),
             removal_records_integrity_witness.claim(),
             removal_records_integrity_witness.nondeterminism(),
-        )?;
+        )?
+        .into();
 
         debug!("proving CollectLockScripts");
         let collect_lock_scripts = Self::produce(
             collect_lock_scripts_witness.program(),
             collect_lock_scripts_witness.claim(),
             collect_lock_scripts_witness.nondeterminism(),
-        )?;
+        )?
+        .into();
 
         debug!("proving KernelToOutputs");
         let kernel_to_outputs = Self::produce(
             kernel_to_outputs_witness.program(),
             kernel_to_outputs_witness.claim(),
             kernel_to_outputs_witness.nondeterminism(),
-        )?;
+        )?
+        .into();
 
         debug!("proving CollectTypeScripts");
         let collect_type_scripts = Self::produce(
             collect_type_scripts_witness.program(),
             collect_type_scripts_witness.claim(),
             collect_type_scripts_witness.nondeterminism(),
-        )?;
+        )?
+        .into();
 
         debug!("proving lock scripts");
         let mut lock_scripts_halt = vec![];
@@ -74,7 +77,8 @@ impl super::ProofBuilder {
                 lock_script_and_witness.program.clone(),
                 claim,
                 lock_script_and_witness.nondeterminism(),
-            )?;
+            )?
+            .into();
             lock_scripts_halt.push(lock_script_and_witness);
         }
 
@@ -93,7 +97,7 @@ impl super::ProofBuilder {
             let claim = Claim::new(tsaw.program.hash()).with_input(input);
 
             let type_script_halt =
-                Self::produce(tsaw.program.clone(), claim, tsaw.nondeterminism())?;
+                Self::produce(tsaw.program.clone(), claim, tsaw.nondeterminism())?.into();
 
             type_scripts_halt.push(type_script_halt);
         }

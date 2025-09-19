@@ -1,9 +1,17 @@
-use anyhow::{anyhow, Context, Result};
-use neptune_cash::config_models::{data_directory::DataDirectory, network::Network};
-use serde::{de::DeserializeOwned, Serialize};
-use sha2::{Digest, Sha256};
-use sqlx::{Row, SqlitePool};
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
+use std::str::FromStr;
+
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Result;
+use neptune_cash::api::export::Network;
+use neptune_cash::application::config::data_directory::DataDirectory;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+use sha2::Digest;
+use sha2::Sha256;
+use sqlx::Row;
+use sqlx::SqlitePool;
 use tokio::sync::Mutex;
 
 use crate::rpc::tls;

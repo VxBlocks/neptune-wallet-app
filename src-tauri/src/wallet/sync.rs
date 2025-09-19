@@ -1,29 +1,26 @@
-use anyhow::{Context, Result};
-use neptune_cash::{
-    models::{blockchain::block::Block, proof_abstractions::timestamp::Timestamp},
-    util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator,
-};
+use std::sync::atomic::AtomicI8;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use std::time::Duration;
+
+use anyhow::Context;
+use anyhow::Result;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::protocol::consensus::block::Block;
+use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
 use serde::Serialize;
-use std::{
-    sync::{
-        atomic::{AtomicI8, AtomicU64, Ordering},
-        Arc,
-    },
-    time::Duration,
-};
-use tokio::{
-    select,
-    sync::{Mutex, Notify},
-    task::JoinHandle,
-};
+use tokio::select;
+use tokio::sync::Mutex;
+use tokio::sync::Notify;
+use tokio::task::JoinHandle;
 use tracing::*;
 
-use crate::{config::Config, wallet::block_cache::BlockCacheImpl};
-
-use super::{
-    fake_archival_state::{FakeArchivalState, SnapshotReader},
-    WalletState,
-};
+use super::fake_archival_state::FakeArchivalState;
+use super::fake_archival_state::SnapshotReader;
+use super::WalletState;
+use crate::config::Config;
+use crate::wallet::block_cache::BlockCacheImpl;
 
 const SYNC_STOPPED: i8 = 0;
 const SYNC_SYNCING: i8 = 1;
@@ -155,17 +152,22 @@ impl SyncState {
 
     async fn sync_inner(&self) -> Result<()> {
         let start = self.wallet.start_height().await?;
+        debug!("start set to: {start}");
 
         let mut previous_mutator_set_accumulator = match start {
             0 => MutatorSetAccumulator::default(),
             1 => Block::genesis(self.wallet.network).mutator_set_accumulator_after()?,
             _ => {
+                let context = format!(
+                    "Prev block does not exist. Could not get block with height {}",
+                    start - 1
+                );
                 let block = self
                     .fake_archival_state
                     .get_block_by_height(start - 1)
                     .await?
-                    .context("prev block do not exists")?;
-                block.mutator_set_accumulator_after()?
+                    .context(context)?;
+                block.mutator_set_accumulator_after()
             }
         };
 
@@ -261,7 +263,7 @@ impl SyncState {
             .context("get block error")?
         {
             Some(block) => {
-                self.syncing_new_tip(block.header().height.into());
+                self.syncing_new_tip(block.kernel.header.height.into());
                 block
             }
             None => {
@@ -284,13 +286,13 @@ impl SyncState {
 
         debug!("get block done: {}", current_height);
 
-        let current_mutator_set_accumulator = current_block.mutator_set_accumulator_after()?;
+        let current_mutator_set_accumulator = current_block.mutator_set_accumulator_after();
 
         debug!("update wallet state with new block: {}", current_height);
 
         let mut should_update = self.updated_to_tip.load(Ordering::Relaxed) == 1;
         if should_update {
-            if (Timestamp::now() - current_block.header().timestamp).as_duration()
+            if (Timestamp::now() - current_block.kernel.header.timestamp).as_duration()
                 > Duration::from_secs(26 * 60)
             {
                 should_update = false
@@ -315,7 +317,7 @@ impl SyncState {
                 .await
                 .context(format!("failed to get block at height: {}", fork))?
                 .context("fork block not found")?;
-            *previous_mutator_set_accumulator = fork_block.mutator_set_accumulator_after()?;
+            *previous_mutator_set_accumulator = fork_block.mutator_set_accumulator_after();
 
             self.update(fork);
             self.fake_archival_state

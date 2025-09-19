@@ -1,13 +1,12 @@
-use neptune_cash::api::export::{NativeCurrencyAmount, Network};
-use neptune_cash::models::blockchain::transaction::validity::neptune_proof::Proof;
-
+use neptune_cash::api::export::NativeCurrencyAmount;
+use neptune_cash::api::export::Network;
 use neptune_cash::prelude::tasm_lib;
+use neptune_cash::prelude::triton_vm::proof::Proof;
 use tasm_lib::triton_vm::prelude::Program;
 use tasm_lib::triton_vm::proof::Claim;
 use tasm_lib::triton_vm::prove;
 use tasm_lib::triton_vm::stark::Stark;
 use tasm_lib::triton_vm::vm::NonDeterminism;
-
 use tracing::*;
 
 mod proof_collection;

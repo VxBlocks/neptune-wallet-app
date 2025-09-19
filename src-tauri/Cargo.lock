@@ -3377,7 +3377,7 @@ dependencies = [
 
 [[package]]
 name = "neptune-cash"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -3385,6 +3385,8 @@ dependencies = [
  "arraystring",
  "async-stream",
  "async-trait",
+ "axum",
+ "axum-extra",
  "bech32",
  "bincode",
  "bytes",
@@ -3404,7 +3406,6 @@ dependencies = [
  "num-traits",
  "priority-queue",
  "rand 0.9.1",
- "rand_distr",
  "rayon",
  "readonly",
  "regex",
@@ -3427,6 +3428,7 @@ dependencies = [
  "tokio",
  "tokio-serde",
  "tokio-util",
+ "tower-http",
  "tracing",
  "tracing-subscriber",
  "tracing-test",
@@ -4775,16 +4777,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom 0.3.2",
-]
-
-[[package]]
-name = "rand_distr"
-version = "0.4.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32cb0b9bc82b0a0876c2dd994a7e7a2683d3e7390ca40e6886785ef0c7e3ee31"
-dependencies = [
- "num-traits",
- "rand 0.8.5",
 ]
 
 [[package]]

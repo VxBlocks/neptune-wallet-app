@@ -1,18 +1,22 @@
 use std::sync::atomic::Ordering;
 
-use neptune_cash::{
-    models::{
-        proof_abstractions::timestamp::Timestamp, state::wallet::expected_utxo::ExpectedUtxo,
-    },
-    prelude::tasm_lib::prelude::Digest,
-};
-use serde::{Deserialize, Serialize};
-use sqlx::{Row, Sqlite, SqliteConnection};
-use sqlx_migrator::{Info, Migrate, Migrator, Plan};
+use anyhow::Result;
+use neptune_cash::api::export::Timestamp;
+use neptune_cash::prelude::tasm_lib::prelude::Digest;
+use neptune_cash::state::wallet::expected_utxo::ExpectedUtxo;
+use serde::Deserialize;
+use serde::Serialize;
+use sqlx::Row;
+use sqlx::Sqlite;
+use sqlx::SqliteConnection;
+use sqlx_migrator::Info;
+use sqlx_migrator::Migrate;
+use sqlx_migrator::Migrator;
+use sqlx_migrator::Plan;
 use tracing::info;
 
-use super::{UtxoRecoveryData, WalletState};
-use anyhow::Result;
+use super::UtxoRecoveryData;
+use super::WalletState;
 
 struct CreateWalletStateNumKeysMigration;
 
@@ -607,12 +611,12 @@ impl WalletState {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::config::wallet::{ScanConfig, WalletConfig};
+    use neptune_cash::api::export::Network;
+    use neptune_cash::state::wallet::wallet_entropy::WalletEntropy;
 
     use super::*;
-    use neptune_cash::{
-        config_models::network::Network, models::state::wallet::wallet_entropy::WalletEntropy,
-    };
+    use crate::config::wallet::ScanConfig;
+    use crate::config::wallet::WalletConfig;
     #[tokio::test]
     async fn test_migrate_tables() {
         let config = WalletConfig {

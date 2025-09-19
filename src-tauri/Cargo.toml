@@ -18,8 +18,9 @@ tauri-build = { version = "2", features = [], optional = true }
 chrono = "0.4.31"
 
 [dependencies.neptune-cash]
-path = "../../neptune-wallet-core/neptune-core"
+path = "../../neptune-core/neptune-core"
 default-features = false
+features = ["rest"]
 
 [dependencies]
 tauri = { version = "2", features = [
@@ -37,12 +38,7 @@ tauri-plugin-opener = { version = "2", optional = true }
 anyhow = { version = "1.0", features = ["backtrace"] }
 tokio = { version = "1.44.1", features = ["full", "tracing"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = [
-    "std",
-    "env-filter",
-    "time",
-    "fmt",
-] }
+tracing-subscriber = { version = "0.3", features = ["std", "env-filter", "time", "fmt"] }
 tokio-serde = { version = "0.8", features = ["bincode", "json"] }
 reqwest = { version = "0.12.22", features = ["json", "socks"] }
 num-traits = "0.2.19"

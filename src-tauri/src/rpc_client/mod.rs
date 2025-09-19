@@ -1,19 +1,17 @@
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::atomic::AtomicPtr;
+use std::sync::atomic::Ordering;
 
-use anyhow::{Context, Result};
-use neptune_cash::{
-    models::blockchain::{
-        block::{block_height::BlockHeight, block_info::BlockInfo, Block},
-        transaction::Transaction,
-    },
-    prelude::twenty_first::prelude::Digest,
-    prelude::twenty_first::prelude::MmrMembershipProof,
-    util_types::mutator_set::removal_record::chunk_dictionary::ChunkDictionary,
-};
-
+use anyhow::Context;
+use anyhow::Result;
+use neptune_cash::api::export::Transaction;
+use neptune_cash::application::rest_server::ExportedBlock;
+use neptune_cash::protocol::consensus::block::block_info::BlockInfo;
+use neptune_cash::util_types::mutator_set::archival_mutator_set::ResponseMsMembershipProofPrivacyPreserving;
+use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
 use once_cell::sync::Lazy;
 use reqwest;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use thiserror::Error;
 use tracing::info;
 
@@ -27,25 +25,6 @@ pub struct NodeRpcClient {
     rest_server: AtomicPtr<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RequestMsMembershipProofEx {
-    pub swbf_indices: Vec<u128>,
-    pub aocl_leaf_index: u64,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResponseMsMembershipProofEx {
-    pub height: BlockHeight,
-    pub block_id: Digest,
-    pub proofs: Vec<MsMembershipProofEx>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MsMembershipProofEx {
-    pub auth_path_aocl: MmrMembershipProof,
-    pub target_chunks: ChunkDictionary,
-}
-
 #[derive(Debug, Serialize, Clone)]
 pub struct BroadcastTx<'a> {
     pub transaction: &'a Transaction,
@@ -55,28 +34,6 @@ pub struct BroadcastTx<'a> {
 struct ResponseSendTx {
     status: u64,
     message: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct RpcBlock {
-    pub block: Block,
-    pub hash: Digest,
-}
-
-impl RpcBlock {
-    pub fn to_block(&self) -> Block {
-        let block = self.block.clone();
-        block.digest.get_or_init(|| self.hash);
-        block
-    }
-
-    pub fn from_block(block: Block) -> Self {
-        let hash = block.hash();
-        Self {
-            block: block,
-            hash: hash,
-        }
-    }
 }
 
 impl NodeRpcClient {
@@ -102,10 +59,10 @@ impl NodeRpcClient {
         reqwest::Client::new()
     }
 
-    pub async fn request_block(&self, height: u64) -> Result<Option<RpcBlock>> {
+    pub async fn request_block(&self, height: u64) -> Result<Option<ExportedBlock>> {
         let block = Self::get_client()
             .get(format!(
-                "{}/rpc/block/height/{}",
+                "{}/rpc/block/height/{}?include_proof=false",
                 self.rest_server(),
                 height
             ))
@@ -113,7 +70,7 @@ impl NodeRpcClient {
             .send()
             .await?
             .error_for_status()?
-            .json::<Option<RpcBlock>>()
+            .json::<Option<ExportedBlock>>()
             .await?;
 
         Ok(block)
@@ -147,10 +104,10 @@ impl NodeRpcClient {
         Ok(block)
     }
 
-    pub async fn request_block_by_digest(&self, digest: &str) -> Result<Option<RpcBlock>> {
+    pub async fn request_block_by_digest(&self, digest: &str) -> Result<Option<ExportedBlock>> {
         let block = Self::get_client()
             .get(format!(
-                "{}/rpc/block/digest/{}",
+                "{}/rpc/block/digest/{}?include_proof=false",
                 self.rest_server(),
                 digest
             ))
@@ -158,7 +115,7 @@ impl NodeRpcClient {
             .send()
             .await?
             .error_for_status()?
-            .json::<Option<RpcBlock>>()
+            .json::<Option<ExportedBlock>>()
             .await?;
         Ok(block)
     }
@@ -167,10 +124,10 @@ impl NodeRpcClient {
         &self,
         height: u64,
         batch_size: u64,
-    ) -> Result<Vec<RpcBlock>> {
+    ) -> Result<Vec<ExportedBlock>> {
         let body = Self::get_client()
             .get(format!(
-                "{}/rpc/batch_block/{}/{}",
+                "{}/rpc/batch_block/{}/{}?include_proof=false",
                 self.rest_server(),
                 height,
                 batch_size
@@ -182,13 +139,18 @@ impl NodeRpcClient {
             .bytes()
             .await?;
 
-        let blocks: Vec<RpcBlock> = bincode::deserialize(&body)?;
+        let blocks: Vec<ExportedBlock> = bincode::deserialize(&body)?;
 
         Ok(blocks)
     }
 
     pub async fn broadcast_transaction(&self, tx: &Transaction) -> Result<String, BroadcastError> {
         let tx_req = BroadcastTx { transaction: tx };
+
+        assert!(
+            tx_req.transaction.proof.is_proof_collection(),
+            "Application can only broadcast proof-collection backed transactions."
+        );
 
         let tx_b = bincode::serialize(&tx_req).context("serialize tx req")?;
 
@@ -209,16 +171,16 @@ impl NodeRpcClient {
             };
             return Err(BroadcastError::Server(anyhow::anyhow!(resp.message)));
         }
-        Ok(tx.kernel.txid().to_string())
+        Ok(tx.txid().to_string())
     }
 
-    pub async fn restore_msmp(
+    pub async fn restore_msmps(
         &self,
-        request: Vec<RequestMsMembershipProofEx>,
-    ) -> Result<ResponseMsMembershipProofEx> {
+        request: Vec<AbsoluteIndexSet>,
+    ) -> Result<ResponseMsMembershipProofPrivacyPreserving> {
         let body = bincode::serialize(&request)?;
 
-        let kernel = Self::get_client()
+        let msmp_recovery = Self::get_client()
             .post(format!(
                 "{}/rpc/generate_membership_proof",
                 self.rest_server()
@@ -230,7 +192,7 @@ impl NodeRpcClient {
             .bytes()
             .await?;
 
-        Ok(bincode::deserialize(&kernel)?)
+        Ok(bincode::deserialize(&msmp_recovery)?)
     }
 }
 

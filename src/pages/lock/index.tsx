@@ -23,13 +23,13 @@ function LockPage() {
                 autoClose: 2000,
             })
         }
-    } 
-    async function handleSetPassword() { 
+    }
+    async function handleSetPassword() {
         try {
             await set_password("", password);
             dispatch(checkAuthPassword())
         } catch (error: any) {
-            console.log(error); 
+            console.log(error);
             notifications.show({
                 position: 'top-right',
                 message: error || "Set password failed",
