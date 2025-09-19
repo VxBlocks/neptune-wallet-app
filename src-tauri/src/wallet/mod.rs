@@ -21,7 +21,6 @@ use neptune_cash::state::wallet::incoming_utxo::IncomingUtxo;
 use neptune_cash::state::wallet::wallet_entropy::WalletEntropy;
 use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
 use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
-use neptune_cash::util_types::mutator_set::removal_record::RemovalRecord;
 use pending::TransactionUpdater;
 use rayon::prelude::*;
 use serde::Deserialize;
@@ -181,14 +180,10 @@ impl WalletState {
 
         let MutatorSetUpdate {
             additions: addition_records,
-            removals: removal_records,
+            removals: _,
         } = block.mutator_set_update();
 
         debug!("get removal_records");
-        let mut removal_records = removal_records;
-        removal_records.reverse();
-        let mut removal_records: Vec<&mut RemovalRecord> =
-            removal_records.iter_mut().collect::<Vec<_>>();
 
         debug!("scan for incoming utxo");
         let incommings = self.par_scan_for_incoming_utxo(&block).await?;
@@ -202,8 +197,6 @@ impl WalletState {
         debug!("iterate addition records");
         let mut gusser_preimage = None;
         for addition_record in &addition_records {
-            RemovalRecord::batch_update_from_addition(&mut removal_records, &msa_state);
-
             if let Some(incoming_utxo) = incoming.get(addition_record) {
                 let r = incoming_utxo_recovery_data_from_incomming_utxo(
                     incoming_utxo.clone(),
@@ -217,12 +210,6 @@ impl WalletState {
             }
 
             msa_state.add(addition_record);
-        }
-
-        debug!("iterate removal records");
-        while let Some(removal_record) = removal_records.pop() {
-            RemovalRecord::batch_update_from_remove(&mut removal_records, removal_record);
-            msa_state.remove(removal_record);
         }
 
         debug!("append utxos");
