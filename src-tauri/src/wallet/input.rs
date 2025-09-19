@@ -1,16 +1,16 @@
+use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
+use neptune_cash::api::export::BlockHeight;
 use neptune_cash::api::export::NativeCurrencyAmount;
 use neptune_cash::api::export::ReceivingAddress;
 use neptune_cash::api::export::SpendingKey;
 use neptune_cash::api::export::Timestamp;
 use neptune_cash::api::export::Tip5;
 use neptune_cash::api::export::Utxo;
-use neptune_cash::prelude::tasm_lib::prelude::Digest;
 use neptune_cash::state::wallet::unlocked_utxo::UnlockedUtxo;
-use neptune_cash::util_types::mutator_set::archival_mutator_set::RequestMsMembershipProofEx;
-use neptune_cash::util_types::mutator_set::ms_membership_proof::MsMembershipProof;
+use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
 use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
 use rand::seq::SliceRandom;
 use tracing::trace;
@@ -77,7 +77,12 @@ impl super::WalletState {
         fee: NativeCurrencyAmount,
         rule: InputSelectionRule,
         must_include_inputs: Vec<i64>,
-    ) -> anyhow::Result<(Vec<UnlockedUtxo>, Vec<i64>, Digest)> {
+    ) -> anyhow::Result<(
+        Vec<UnlockedUtxo>,
+        Vec<i64>,
+        MutatorSetAccumulator,
+        BlockHeight,
+    )> {
         let mut utxos = self.get_unspent_utxos().await?;
         trace!("Num unspent utxos (not mined): {}", utxos.len());
 
@@ -140,7 +145,7 @@ impl super::WalletState {
         }
 
         trace!("Selected a total of {} inputs", inputs.len());
-        let (inputs, tip_digest) = self.unlock_utxos(inputs).await?;
+        let (inputs, tip_msa, tip_height) = self.unlock_utxos(inputs).await?;
         trace!("Managed to unlock {} inputs", inputs.len());
 
         trace!("Inputs length is: {}", inputs.len());
@@ -150,50 +155,53 @@ impl super::WalletState {
             "Inputs and db_idxs must have the same length"
         );
 
-        Ok((inputs, db_idxs, tip_digest))
+        Ok((inputs, db_idxs, tip_msa, tip_height))
     }
 
+    /// Returns triple (list of unlocked UTXOs, tip mutator set, tip height)
     pub async fn unlock_utxos(
         &self,
         utxos: Vec<UtxoRecoveryData>,
-    ) -> anyhow::Result<(Vec<UnlockedUtxo>, Digest)> {
-        let mut rpc_params = Vec::with_capacity(utxos.len());
+    ) -> anyhow::Result<(Vec<UnlockedUtxo>, MutatorSetAccumulator, BlockHeight)> {
+        let mut index_sets = Vec::with_capacity(utxos.len());
 
         for utxo in &utxos {
             let item = Tip5::hash(&utxo.utxo);
-            let swbf_indices = AbsoluteIndexSet::compute(
+            let index_set = AbsoluteIndexSet::compute(
                 item,
                 utxo.sender_randomness,
                 utxo.receiver_preimage,
                 utxo.aocl_index,
             );
-            let aocl_leaf_index = utxo.aocl_index;
 
-            let param = RequestMsMembershipProofEx {
-                swbf_indices: swbf_indices.to_vec(),
-                aocl_leaf_index,
-            };
-            rpc_params.push(param);
+            index_sets.push(index_set);
         }
 
-        trace!("Requesting {} ms membership proofs", rpc_params.len());
-        let proofs = rpc_client::node_rpc_client()
-            .restore_msmp(rpc_params)
+        trace!("Requesting {} ms membership proofs", index_sets.len());
+        let msmps_recovery_data = rpc_client::node_rpc_client()
+            .restore_msmps(index_sets)
             .await?;
-        trace!("Received {} ms membership proofs", proofs.proofs.len());
+        trace!(
+            "Received {} ms membership proofs",
+            msmps_recovery_data.membership_proofs.len()
+        );
 
         let mut unlocked = Vec::with_capacity(utxos.len());
-        for (proof, utxo) in proofs.proofs.into_iter().zip(utxos) {
+        for (recovery_data, utxo) in msmps_recovery_data.membership_proofs.into_iter().zip(utxos) {
             let spending_key = self
                 .find_spending_key_for_utxo(&utxo.utxo)
                 .context("No spending key found for utxo")?;
 
-            let membership_proof = MsMembershipProof {
-                sender_randomness: utxo.sender_randomness,
-                receiver_preimage: utxo.receiver_preimage,
-                auth_path_aocl: proof.auth_path_aocl,
-                aocl_leaf_index: utxo.aocl_index,
-                target_chunks: proof.target_chunks,
+            let membership_proof = match recovery_data.extract_ms_membership_proof(
+                utxo.aocl_index,
+                utxo.sender_randomness,
+                utxo.receiver_preimage,
+            ) {
+                Ok(msmp) => msmp,
+                Err(err) => bail!(
+                    "Server returned bad mutator set membership proof recovery data: {}",
+                    err.to_string()
+                ),
             };
 
             unlocked.push(UnlockedUtxo::unlock(
@@ -203,7 +211,11 @@ impl super::WalletState {
             ));
         }
 
-        Ok((unlocked, proofs.block_id))
+        Ok((
+            unlocked,
+            msmps_recovery_data.tip_mutator_set,
+            msmps_recovery_data.tip_height,
+        ))
     }
 
     // returns Some(SpendingKey) if the utxo can be unlocked by one of the known

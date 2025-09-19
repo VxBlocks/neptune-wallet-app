@@ -5,9 +5,9 @@ use anyhow::Context;
 use anyhow::Result;
 use neptune_cash::api::export::Transaction;
 use neptune_cash::application::rest_server::ExportedBlock;
-use neptune_cash::application::rest_server::ResponseMsMembershipProofEx;
 use neptune_cash::protocol::consensus::block::block_info::BlockInfo;
-use neptune_cash::util_types::mutator_set::archival_mutator_set::RequestMsMembershipProofEx;
+use neptune_cash::util_types::mutator_set::archival_mutator_set::ResponseMsMembershipProofPrivacyPreserving;
+use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
 use once_cell::sync::Lazy;
 use reqwest;
 use serde::Deserialize;
@@ -174,13 +174,13 @@ impl NodeRpcClient {
         Ok(tx.txid().to_string())
     }
 
-    pub async fn restore_msmp(
+    pub async fn restore_msmps(
         &self,
-        request: Vec<RequestMsMembershipProofEx>,
-    ) -> Result<ResponseMsMembershipProofEx> {
+        request: Vec<AbsoluteIndexSet>,
+    ) -> Result<ResponseMsMembershipProofPrivacyPreserving> {
         let body = bincode::serialize(&request)?;
 
-        let kernel = Self::get_client()
+        let msmp_recovery = Self::get_client()
             .post(format!(
                 "{}/rpc/generate_membership_proof",
                 self.rest_server()
@@ -192,7 +192,7 @@ impl NodeRpcClient {
             .bytes()
             .await?;
 
-        Ok(bincode::deserialize(&kernel)?)
+        Ok(bincode::deserialize(&msmp_recovery)?)
     }
 }
 

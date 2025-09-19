@@ -48,20 +48,6 @@ impl super::WalletState {
         self.num_future_keys.load(Ordering::Relaxed)
     }
 
-    // pub fn get_known_raw_hash_keys(&self) -> Vec<SpendingKey> {
-    //     info!("getting known raw hash keys");
-    //     let ptr = self.know_raw_hash_keys.load(Ordering::Acquire);
-    //     if ptr.is_null() {
-    //         return vec![];
-    //     }
-    //     let keys: &Vec<Digest> = unsafe { &*ptr };
-    //     let keys = keys
-    //         .iter()
-    //         .map(|v| SpendingKey::RawHashLock(HashLockKey::from_preimage(v.clone())))
-    //         .collect();
-    //     keys
-    // }
-
     pub fn get_future_symmetric_keys(&self, range: Range<u64>) -> Vec<(u64, Arc<SpendingKey>)> {
         let key = &self.key;
         (range.start..range.end)

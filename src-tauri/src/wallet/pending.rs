@@ -1,9 +1,7 @@
-use anyhow::Context;
 use anyhow::Result;
 use neptune_cash::api::export::Timestamp;
 use neptune_cash::api::export::TransactionDetails;
 use neptune_cash::api::export::TxProvingCapability;
-use neptune_cash::application::rest_server::ExportedBlock;
 use neptune_cash::state::wallet::expected_utxo::UtxoNotifier;
 use sqlx::Row;
 use sqlx::SqliteConnection;
@@ -147,20 +145,13 @@ impl TransactionUpdater {
             recovery_data_list.push(recovery_data);
         }
 
-        let (unlocked_new, tip_digest) = wallet_state.unlock_utxos(recovery_data_list).await?;
+        let (unlocked_new, tip_mutator_set_accumulator, tip_height) =
+            wallet_state.unlock_utxos(recovery_data_list).await?;
 
-        let tip: ExportedBlock = rpc_client::node_rpc_client()
-            .request_block_by_digest(&tip_digest.to_hex())
-            .await?
-            .context("Failed to get tip block")?;
-
-        let tip_mutator_set_accumulator = tip.mutator_set_accumulator_after();
-
-        let block_height = tip.kernel.header.height;
         for tx_output in tx_outputs.iter_mut() {
             let new_sender_randomness = wallet_state
                 .key
-                .generate_sender_randomness(block_height, tx_output.receiver_digest());
+                .generate_sender_randomness(tip_height, tx_output.receiver_digest());
             tx_output.set_sender_randomness(new_sender_randomness);
         }
 
