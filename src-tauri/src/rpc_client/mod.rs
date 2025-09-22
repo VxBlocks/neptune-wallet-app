@@ -6,6 +6,7 @@ use anyhow::Result;
 use neptune_cash::api::export::Transaction;
 use neptune_cash::application::rest_server::ExportedBlock;
 use neptune_cash::protocol::consensus::block::block_info::BlockInfo;
+use neptune_cash::protocol::peer::transfer_transaction::TransferTransaction;
 use neptune_cash::util_types::mutator_set::archival_mutator_set::ResponseMsMembershipProofPrivacyPreserving;
 use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
 use once_cell::sync::Lazy;
@@ -145,13 +146,12 @@ impl NodeRpcClient {
     }
 
     pub async fn broadcast_transaction(&self, tx: &Transaction) -> Result<String, BroadcastError> {
-        let tx_req = BroadcastTx { transaction: tx };
-
-        assert!(
-            tx_req.transaction.proof.is_proof_collection(),
-            "Application can only broadcast proof-collection backed transactions."
-        );
-
+        // Converting transaction to a `TransferTransaction` gives a type
+        // guarantee that no secrets are being leaked, i.e. that a primitive
+        // witness is never sent to the server.
+        let tx_req: TransferTransaction = tx
+            .try_into()
+            .expect("Transaction must be transferable, i.e. not leak secrets.");
         let tx_b = bincode::serialize(&tx_req).context("serialize tx req")?;
 
         info!("proven tx size: {}", tx_b.len());
