@@ -3378,7 +3378,7 @@ dependencies = [
 [[package]]
 name = "neptune-cash"
 version = "0.4.0"
-source = "git+https://github.com/Neptune-Crypto/neptune-core?branch=wallet-server#8c578e09e3d14948c8363c350b902091f6c6d92d"
+source = "git+https://github.com/Neptune-Crypto/neptune-core?branch=wallet-server#7f133a004894f476d998d45cd451d79590aa6df6"
 dependencies = [
  "aead",
  "aes-gcm",
