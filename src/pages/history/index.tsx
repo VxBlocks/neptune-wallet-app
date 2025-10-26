@@ -10,12 +10,34 @@ export default function HistoryPage() {
     const [section, setSection] = useState('activity');
     const perDay = useActivityPerDay();
 
+    // 计算数据最大值的1.2倍
+    const getYAxisMax = () => {
+        if (!perDay || perDay.length === 0) return 'auto';
+        const maxValue = Math.max(...perDay.flatMap(item => 
+            [item.Received || 0, item.Spent || 0]
+        ));
+        return maxValue * 1.2;
+    };
+
+    // Y轴刻度格式化函数
+    const formatYAxisTick = (value: number) => {
+        if (value >= 1000000) {
+            return `${(value / 1000000).toFixed(1)}m`;
+        } else if (value >= 1000) {
+            return `${(value / 1000).toFixed(1)}k`;
+        }
+        return value.toString();
+    };
+
     return (<WithTitlePageHeader title="History">
         {
             perDay && perDay.length > 0 && <BarChart
-                h={150}
+                h={250}
                 data={perDay}
-                yAxisProps={{ domain: [0, 'auto'] }}
+                yAxisProps={{ 
+                    domain: [0, getYAxisMax()],
+                    tickFormatter: formatYAxisTick
+                }}
                 dataKey="data"
                 withTooltip={false}
                 valueFormatter={(value) => new Intl.NumberFormat('en-US').format(Math.floor(value))}
