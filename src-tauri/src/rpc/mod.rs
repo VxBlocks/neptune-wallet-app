@@ -192,7 +192,7 @@ pub trait WalletRpc {
 
 pub async fn start_rpc_server() -> Result<(), anyhow::Error> {
     let address: SocketAddr =
-        SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(0, 0, 0, 0), RPC_PORT));
+        SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), RPC_PORT));
 
     let cors = CorsLayer::new()
         .allow_origin(tower_http::cors::Any)
