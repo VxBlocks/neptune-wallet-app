@@ -34,6 +34,8 @@
           "path": "**/*"
         }
       ]
-    }
+    },
+    "clipboard-manager:default",
+    "clipboard-manager:allow-write-text"
   ]
 }

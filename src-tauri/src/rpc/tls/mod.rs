@@ -1,6 +1,5 @@
 pub mod aes;
 
-use aes_gcm::aead::generic_array::GenericArray;
 use aes_gcm::aead::OsRng;
 use anyhow::Result;
 use hkdf::Hkdf;
@@ -12,8 +11,7 @@ pub fn generate_p256_shared_secret(
     server_public_key: &[u8],
     client_secret: &[u8],
 ) -> Result<Vec<u8>> {
-    let client_private_key = GenericArray::from_slice(&client_secret);
-    let secret = p256::SecretKey::from_bytes(client_private_key)?;
+    let secret = p256::SecretKey::from_slice(&client_secret)?;
     let pubkey = p256::PublicKey::from_sec1_bytes(server_public_key)?;
     let shared = p256::ecdh::diffie_hellman(secret.to_nonzero_scalar(), pubkey.as_affine());
     Ok(shared.raw_secret_bytes().to_vec())
@@ -35,8 +33,7 @@ pub fn generate_p256_secret() -> Result<Vec<u8>> {
 }
 
 pub fn get_p256_pubkey(sk: &[u8]) -> Vec<u8> {
-    let sk_bytes = GenericArray::from_slice(sk);
-    let sk = p256::SecretKey::from_bytes(sk_bytes).unwrap();
+    let sk = p256::SecretKey::from_slice(sk).unwrap();
     let pubkey = sk.public_key();
     pubkey.to_sec1_bytes().to_vec()
 }

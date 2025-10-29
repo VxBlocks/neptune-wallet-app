@@ -48,7 +48,8 @@ pub fn run() {
                 .unwrap();
         }))
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_opener::init());
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_clipboard_manager::init());
 
     let app = builder
         .setup(|app| {
@@ -229,17 +230,13 @@ fn build_tray_menu(app: &mut App) -> anyhow::Result<()> {
             }
             MENUITEM_COPY_ADDR => tauri::async_runtime::block_on(async {
                 if let Ok(addr) = get_server_url().await {
-                    use clipboard_ext::prelude::ClipboardProvider;
-                    match clipboard_ext::x11_fork::ClipboardContext::new() {
+                    use tauri_plugin_clipboard_manager::ClipboardExt;
+                    match app.clipboard().write_text(addr.clone()) {
+                        Ok(_) => {}
                         Err(e) => {
-                            error!("faied to get clipboard context: {}", e);
+                            error!("failed to write clipboard: {}", e);
                         }
-                        Ok(mut ctx) => {
-                            if let Err(e) = ctx.set_contents(addr) {
-                                error!("faied to write clipboard: {}", e);
-                            }
-                        }
-                    };
+                    }
                 }
             }),
             _ => (),

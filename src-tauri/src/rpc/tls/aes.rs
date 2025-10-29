@@ -1,16 +1,17 @@
 use aes_gcm::aead::OsRng;
 use aes_gcm::{
-    aead::{generic_array::GenericArray, Aead, Nonce},
+    aead::{Aead, Nonce},
     AeadCore, Aes256Gcm, KeyInit,
 };
 use anyhow::Result;
 
 pub fn aes_decode(key: &[u8], cipher_text: &[u8]) -> Result<Vec<u8>> {
-    let key = GenericArray::from_slice(key);
-    let cipher = Aes256Gcm::new(&key);
+    let cipher = Aes256Gcm::new_from_slice(key)?;
     if cipher_text.len() < 12 {
         return Err(anyhow::anyhow!("cipher text too short"));
     }
+
+    #[allow(deprecated)]
     let nonce = Nonce::<Aes256Gcm>::from_slice(&cipher_text[0..12]);
     let cipher_text = &cipher_text[12..];
     let plaintext = cipher
@@ -20,8 +21,7 @@ pub fn aes_decode(key: &[u8], cipher_text: &[u8]) -> Result<Vec<u8>> {
 }
 
 pub fn aes_encode(key: &[u8], plaintext: &[u8]) -> Result<Vec<u8>> {
-    let key = GenericArray::from_slice(key);
-    let cipher = Aes256Gcm::new(&key);
+    let cipher = Aes256Gcm::new_from_slice(&key)?;
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
     let cipher_text = cipher
         .encrypt(&nonce, plaintext)
