@@ -20,7 +20,6 @@ mod config_migrate;
 pub mod consts;
 pub mod wallet;
 
-#[derive(Debug)]
 pub struct Config {
     db: SqlitePool,
     pub password: Mutex<Option<String>>,
