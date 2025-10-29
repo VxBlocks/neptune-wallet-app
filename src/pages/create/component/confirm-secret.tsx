@@ -1,6 +1,8 @@
 import { set_password } from "@/commands/password";
 import { addWallet } from "@/commands/wallet";
+import { useAppDispatch } from "@/store/hooks";
 import { useMnemonic, useOneTimePassword, useOneTimeWalletName } from "@/store/wallet/hooks";
+import { setMnemonic, setOneTimePassword } from "@/store/wallet/wallet-slice";
 import { Box, Button, Flex, Grid, Text } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { IconX } from "@tabler/icons-react";
@@ -14,7 +16,8 @@ export default function ConfirmSecret(props: Props) {
     const oneTimePassword = useOneTimePassword()
     const mnemonic = useMnemonic()
     const [numbers, setNumbers] = useState([] as number[]);
-    const [loading, setLoading] = useState(false)
+    const [loading, setLoading] = useState(false) 
+    const dispatch = useAppDispatch()
     useEffect(() => {
         generateRandomNumbers()
     }, [mnemonic])
@@ -118,7 +121,9 @@ export default function ConfirmSecret(props: Props) {
         setLoading(true)
         try {
             await set_password("", oneTimePassword)
-            await addWallet(walletName, mnemonic, 25, 0, true) 
+            await addWallet(walletName, mnemonic, 25, 0, true)  
+          dispatch(setMnemonic("")) 
+          dispatch(setOneTimePassword(""))
             nextStep()
         } catch (error: any) { 
             notifications.show({

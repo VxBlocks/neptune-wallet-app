@@ -1,6 +1,8 @@
 import { set_password } from "@/commands/password";
 import { addWallet } from "@/commands/wallet";
+import { useAppDispatch } from "@/store/hooks";
 import { useOneTimePassword, useOneTimeWalletName } from "@/store/wallet/hooks";
+import { setOneTimePassword } from "@/store/wallet/wallet-slice";
 import { Button, Flex, NumberInput, Stack, Text, Textarea } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import { useState } from "react";
@@ -17,6 +19,7 @@ export default function ImportCecret({ nextStep }: { nextStep: () => void }) {
     const [loading, setLoading] = useState(false);
     const walletName = useOneTimeWalletName()
     const oneTimePassword = useOneTimePassword()
+    const dispatch = useAppDispatch()
 
     async function handleImport() {
         setLoading(true);
@@ -29,6 +32,7 @@ export default function ImportCecret({ nextStep }: { nextStep: () => void }) {
                 importData.startHeight || 0,
                 false
             );
+            dispatch(setOneTimePassword(""))
             nextStep()
         } catch (error: any) {
             notifications.show({
