@@ -167,7 +167,6 @@ fn create_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
             .min_inner_size(860.0, 630.0)
             .resizable(true)
             .visible(false)
-            .transparent(true)
             .decorations(true)
             .shadow(true)
             .build();

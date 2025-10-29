@@ -35,6 +35,6 @@
     "security": {
       "csp": "default-src 'self'"
     },
-    "macOSPrivateApi": true
+    "macOSPrivateApi": false
   }
 }
