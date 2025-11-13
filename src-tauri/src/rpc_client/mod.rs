@@ -63,7 +63,7 @@ impl NodeRpcClient {
     pub async fn request_block(&self, height: u64) -> Result<Option<ExportedBlock>> {
         let block = Self::get_client()
             .get(format!(
-                "{}/rpc/block/height/{}?include_proof=false",
+                "{}/rpc/block/{}?include_proof=false",
                 self.rest_server(),
                 height
             ))
@@ -92,7 +92,7 @@ impl NodeRpcClient {
     pub async fn get_block_info(&self, digest: &str) -> Result<Option<BlockInfo>> {
         let block = Self::get_client()
             .get(format!(
-                "{}/rpc/block_info/digest/{}",
+                "{}/rpc/block_info/{}",
                 self.rest_server(),
                 digest
             ))
@@ -108,7 +108,7 @@ impl NodeRpcClient {
     pub async fn request_block_by_digest(&self, digest: &str) -> Result<Option<ExportedBlock>> {
         let block = Self::get_client()
             .get(format!(
-                "{}/rpc/block/digest/{}?include_proof=false",
+                "{}/rpc/block/{}?include_proof=false",
                 self.rest_server(),
                 digest
             ))
