@@ -3,16 +3,24 @@ version: 3
 tasks:
   build:
     cmds:
-      - cmd: yarn tauri build --target universal-apple-darwin
-        platforms: [darwin]
+      - task: build-macos
       - cmd: yarn tauri build
         platforms: [linux]
-      - cmd: yarn tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
-        platforms: [linux]
+      - task: build-windows-cross
 
   dev:
     cmds:
       - task: dev-release
+
+  build-windows-cross:
+    platforms: [linux]
+    cmds:
+      - yarn tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
+  
+  build-macos:
+    platforms: [darwin]
+    cmds:
+      - yarn tauri build --target universal-apple-darwin
 
   dev-release:
     cmds:

@@ -15,7 +15,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [], optional = true }
-chrono = "0.4.31"
+chrono = "0.4.42"
 
 [dependencies.neptune-cash]
 git = "https://github.com/Neptune-Crypto/neptune-core"
@@ -90,12 +90,16 @@ gui = [
 
 cli = ["dep:dialoguer"]
 
+[profile.release.package.triton-vm]
+opt-level = 3
+debug = false
+incremental = false
+debug-assertions = false
+overflow-checks = false
+
 [profile.release]
 panic = "abort"
-overflow-checks = true
-lto = "thin"
-strip = "symbols"
-codegen-units = 1
+opt-level = 3
 
 [patch.crates-io]
 leveldb-sys = { path = "../leveldb-sys" }
