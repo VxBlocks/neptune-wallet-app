@@ -19,7 +19,8 @@ chrono = "0.4.31"
 
 [dependencies.neptune-cash]
 git = "https://github.com/Neptune-Crypto/neptune-core"
-branch = "wallet-server"
+# branch = "wallet-server"
+rev = "ef59f1b"
 default-features = false
 features = ["rest"]
 
