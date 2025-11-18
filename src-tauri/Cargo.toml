@@ -77,7 +77,9 @@ openssl-sys = { version = "0.9.106", features = ["vendored"] }
 
 [features]
 default = ["gui"]
-dev-release = []
+dev-release = [
+    "tauri/devtools"
+]
 gui = [
     "dep:tauri",
     "dep:tauri-plugin-clipboard-manager",
