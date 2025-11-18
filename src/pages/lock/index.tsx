@@ -76,6 +76,7 @@ function LockPage() {
                             value={password}
                             onKeyDown={handleKeyPress}
                             onChange={(event) => setPassword(event.currentTarget.value)}
+                            autoFocus={true}
                         />
                         <Button variant="light" disabled={!password} onClick={handleUnlock}>
                             UnLock
