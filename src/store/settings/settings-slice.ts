@@ -59,13 +59,7 @@ export const queryCurrentPlatform = createAsyncThunk<
 >(
     '/api/settings/queryCurrentPlatform',
     async () => {
-        let platform = ""
-        const req = await get_platform();
-        if (req == "linux") {
-            platform = "gnome"
-        } else {
-            platform = req
-        }
+        const platform = await get_platform();
         return {
             data: platform
         }
