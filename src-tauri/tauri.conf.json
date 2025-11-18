@@ -33,7 +33,7 @@
   "app": {
     "withGlobalTauri": false,
     "security": {
-      "csp": "default-src 'self'"
+      "csp": "default-src 'self' *.localhost 127.0.0.1 *.vxb.ai; connect-src 'self' http://127.0.0.1:* *.localhost *.vxb.ai; style-src 'self' 'unsafe-inline'"
     },
     "macOSPrivateApi": false
   }
