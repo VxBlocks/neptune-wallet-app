@@ -1,6 +1,6 @@
 use anyhow::Result;
-use neptune_cash::api::export::Timestamp;
-use neptune_cash::protocol::consensus::type_scripts::native_currency_amount::NativeCurrencyAmount;
+use neptune_privacy::api::export::Timestamp;
+use neptune_privacy::protocol::consensus::type_scripts::native_currency_amount::NativeCurrencyAmount;
 use serde::Deserialize;
 use serde::Serialize;
 

@@ -3,12 +3,12 @@ use std::sync::atomic::Ordering;
 
 use anyhow::Context;
 use anyhow::Result;
-use neptune_cash::api::export::Transaction;
-use neptune_cash::application::rest_server::ExportedBlock;
-use neptune_cash::protocol::consensus::block::block_info::BlockInfo;
-use neptune_cash::protocol::peer::transfer_transaction::TransferTransaction;
-use neptune_cash::util_types::mutator_set::archival_mutator_set::ResponseMsMembershipProofPrivacyPreserving;
-use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
+use neptune_privacy::api::export::Transaction;
+use neptune_privacy::application::rest_server::ExportedBlock;
+use neptune_privacy::protocol::consensus::block::block_info::BlockInfo;
+use neptune_privacy::protocol::peer::transfer_transaction::TransferTransaction;
+use neptune_privacy::util_types::mutator_set::archival_mutator_set::ResponseMsMembershipProofPrivacyPreserving;
+use neptune_privacy::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
 use once_cell::sync::Lazy;
 use reqwest;
 use serde::Deserialize;

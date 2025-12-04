@@ -6,9 +6,9 @@ use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
-use neptune_cash::api::export::Timestamp;
-use neptune_cash::protocol::consensus::block::Block;
-use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
+use neptune_privacy::api::export::Timestamp;
+use neptune_privacy::protocol::consensus::block::Block;
+use neptune_privacy::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
 use serde::Serialize;
 use tokio::select;
 use tokio::sync::Mutex;

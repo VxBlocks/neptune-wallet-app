@@ -4,7 +4,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 use anyhow::Result;
-use neptune_cash::api::export::SpendingKey;
+use neptune_privacy::api::export::SpendingKey;
 use rayon::prelude::*;
 
 impl super::WalletState {

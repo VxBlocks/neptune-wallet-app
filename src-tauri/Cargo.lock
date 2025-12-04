@@ -3411,9 +3411,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "neptune-cash"
-version = "0.5.0"
-source = "git+https://github.com/Neptune-Crypto/neptune-core?rev=ef59f1b#ef59f1b0b9e4e41f807f8b68c245ae7fd51cc50f"
+name = "neptune-privacy"
+version = "0.1.0"
+source = "git+https://github.com/neptuneprivacy/xnt-core?rev=9afe0af#9afe0af60097454a39c21d009669bb6af74f7839"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -3438,7 +3438,6 @@ dependencies = [
  "itertools 0.11.0",
  "leveldb-sys",
  "memmap2",
- "neptune-rpc-macros",
  "num-bigint",
  "num-rational",
  "num-traits",
@@ -3471,17 +3470,8 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tracing-test",
+ "xnt-rpc-macros",
  "zeroize",
-]
-
-[[package]]
-name = "neptune-rpc-macros"
-version = "0.5.0"
-source = "git+https://github.com/Neptune-Crypto/neptune-core?rev=ef59f1b#ef59f1b0b9e4e41f807f8b68c245ae7fd51cc50f"
-dependencies = [
- "convert_case 0.8.0",
- "quote",
- "syn 2.0.110",
 ]
 
 [[package]]
@@ -3503,7 +3493,7 @@ dependencies = [
  "hkdf",
  "hyper-util",
  "itertools 0.14.0",
- "neptune-cash",
+ "neptune-privacy",
  "num-traits",
  "once_cell",
  "openssl-sys",
@@ -8661,6 +8651,16 @@ name = "x11rb-protocol"
 version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ea6fc2961e4ef194dcbfe56bb845534d0dc8098940c7e5c012a258bfec6701bd"
+
+[[package]]
+name = "xnt-rpc-macros"
+version = "0.1.0"
+source = "git+https://github.com/neptuneprivacy/xnt-core?rev=9afe0af#9afe0af60097454a39c21d009669bb6af74f7839"
+dependencies = [
+ "convert_case 0.8.0",
+ "quote",
+ "syn 2.0.110",
+]
 
 [[package]]
 name = "yoke"

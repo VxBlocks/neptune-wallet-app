@@ -9,18 +9,18 @@ use std::sync::atomic::Ordering;
 use anyhow::Context;
 use anyhow::Result;
 use itertools::Itertools;
-use neptune_cash::api::export::Network;
-use neptune_cash::api::export::Tip5;
-use neptune_cash::api::export::Utxo;
-use neptune_cash::application::config::data_directory::DataDirectory;
-use neptune_cash::application::rest_server::ExportedBlock;
-use neptune_cash::prelude::tasm_lib::prelude::Digest;
-use neptune_cash::protocol::consensus::block::mutator_set_update::MutatorSetUpdate;
-use neptune_cash::protocol::proof_abstractions::mast_hash::MastHash;
-use neptune_cash::state::wallet::incoming_utxo::IncomingUtxo;
-use neptune_cash::state::wallet::wallet_entropy::WalletEntropy;
-use neptune_cash::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
-use neptune_cash::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
+use neptune_privacy::api::export::Network;
+use neptune_privacy::api::export::Tip5;
+use neptune_privacy::api::export::Utxo;
+use neptune_privacy::application::config::data_directory::DataDirectory;
+use neptune_privacy::application::rest_server::ExportedBlock;
+use neptune_privacy::prelude::tasm_lib::prelude::Digest;
+use neptune_privacy::protocol::consensus::block::mutator_set_update::MutatorSetUpdate;
+use neptune_privacy::protocol::proof_abstractions::mast_hash::MastHash;
+use neptune_privacy::state::wallet::incoming_utxo::IncomingUtxo;
+use neptune_privacy::state::wallet::wallet_entropy::WalletEntropy;
+use neptune_privacy::util_types::mutator_set::mutator_set_accumulator::MutatorSetAccumulator;
+use neptune_privacy::util_types::mutator_set::removal_record::absolute_index_set::AbsoluteIndexSet;
 use pending::TransactionUpdater;
 use rayon::prelude::*;
 use serde::Deserialize;
@@ -204,8 +204,8 @@ impl WalletState {
                 );
                 recovery_datas.push(r);
 
-                if incoming_utxo.is_guesser_fee() {
-                    gusser_preimage = Some(incoming_utxo.receiver_preimage());
+                if incoming_utxo.is_guesser_fee {
+                    gusser_preimage = Some(incoming_utxo.receiver_preimage);
                 }
             }
 
@@ -265,7 +265,7 @@ impl WalletState {
             .await?
             .into_iter()
             .map(|(recovery, txid)| {
-                let digest = Tip5::hash(recovery.utxo());
+                let digest = Tip5::hash(&recovery.utxo);
                 (digest, txid)
             })
             .collect_vec();
@@ -348,12 +348,12 @@ impl WalletState {
                 .expect("Exported block must have guesser fee UTXOs")
                 .into_iter()
                 .map(|utxo| {
-                    IncomingUtxo::new(
+                    IncomingUtxo{
                         utxo,
                         sender_randomness,
-                        own_guesser_key.receiver_preimage(),
-                        true,
-                    )
+                        receiver_preimage: own_guesser_key.receiver_preimage(),
+                        is_guesser_fee: true,
+                    }
                 })
                 .collect_vec()
         } else {
@@ -451,19 +451,19 @@ fn incoming_utxo_recovery_data_from_incomming_utxo(
     utxo: IncomingUtxo,
     msa_state: &MutatorSetAccumulator,
 ) -> UtxoRecoveryData {
-    let utxo_digest = Tip5::hash(utxo.utxo());
+    let utxo_digest = Tip5::hash(&utxo.utxo);
     let new_own_membership_proof = msa_state.prove(
         utxo_digest,
-        utxo.sender_randomness(),
-        utxo.receiver_preimage(),
+        utxo.sender_randomness,
+        utxo.receiver_preimage,
     );
 
     let aocl_index = new_own_membership_proof.aocl_leaf_index;
 
     UtxoRecoveryData {
-        utxo: utxo.utxo().to_owned(),
-        sender_randomness: utxo.sender_randomness(),
-        receiver_preimage: utxo.receiver_preimage(),
+        utxo: utxo.utxo.to_owned(),
+        sender_randomness: utxo.sender_randomness,
+        receiver_preimage: utxo.receiver_preimage,
         aocl_index,
     }
 }

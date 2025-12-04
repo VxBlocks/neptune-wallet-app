@@ -18,7 +18,7 @@ mod service;
 #[cfg(feature = "gui")]
 mod session_store;
 pub mod wallet;
-pub use neptune_cash;
+pub use neptune_privacy;
 
 #[cfg(feature = "gui")]
 pub fn add_commands<R: tauri::Runtime>(app: tauri::Builder<R>) -> tauri::Builder<R> {

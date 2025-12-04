@@ -1,8 +1,8 @@
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use neptune_cash::application::rest_server::ExportedBlock;
-use neptune_cash::prelude::tasm_lib::prelude::Digest;
+use neptune_privacy::application::rest_server::ExportedBlock;
+use neptune_privacy::prelude::tasm_lib::prelude::Digest;
 use tracing::debug;
 
 use crate::rpc_client;

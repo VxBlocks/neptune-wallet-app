@@ -82,7 +82,7 @@ fn build_target_filter(level: &str) -> tracing_subscriber::filter::Targets {
         Err(_) => filter::LevelFilter::INFO,
     };
     filter::Targets::new().with_targets(vec![
-        ("neptune_cash", level_filter),
+        ("neptune_privacy", level_filter),
         ("neptune_wallet", level_filter),
         ("wallet", level_filter),
         ("hyper_util", filter::LevelFilter::WARN),

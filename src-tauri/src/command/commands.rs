@@ -3,7 +3,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
-use neptune_cash::api::export::Network;
+use neptune_privacy::api::export::Network;
 
 use crate::config::wallet::ScanConfig;
 use crate::config::wallet::WalletData;

@@ -1,9 +1,9 @@
 use std::sync::atomic::Ordering;
 
 use anyhow::Result;
-use neptune_cash::api::export::Timestamp;
-use neptune_cash::prelude::tasm_lib::prelude::Digest;
-use neptune_cash::state::wallet::expected_utxo::ExpectedUtxo;
+use neptune_privacy::api::export::Timestamp;
+use neptune_privacy::prelude::tasm_lib::prelude::Digest;
+use neptune_privacy::state::wallet::expected_utxo::ExpectedUtxo;
 use serde::Deserialize;
 use serde::Serialize;
 use sqlx::Row;
@@ -611,8 +611,8 @@ impl WalletState {
 mod tests {
     use std::path::PathBuf;
 
-    use neptune_cash::api::export::Network;
-    use neptune_cash::state::wallet::wallet_entropy::WalletEntropy;
+    use neptune_privacy::api::export::Network;
+    use neptune_privacy::state::wallet::wallet_entropy::WalletEntropy;
 
     use super::*;
     use crate::config::wallet::ScanConfig;

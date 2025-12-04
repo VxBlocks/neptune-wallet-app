@@ -11,9 +11,9 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
-use neptune_cash::api::export::Network;
-use neptune_cash::application::rest_server::ExportedBlock;
-use neptune_cash::prelude::tasm_lib::prelude::Digest;
+use neptune_privacy::api::export::Network;
+use neptune_privacy::application::rest_server::ExportedBlock;
+use neptune_privacy::prelude::tasm_lib::prelude::Digest;
 use serde::Deserialize;
 use serde::Serialize;
 use tokio::fs::File;
@@ -458,7 +458,7 @@ impl SnapshotReader {
 mod tests {
     use std::time::Instant;
 
-    use neptune_cash::api::export::BlockHeight;
+    use neptune_privacy::api::export::BlockHeight;
 
     use super::*;
 

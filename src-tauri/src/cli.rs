@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use clap::Parser;
-use neptune_cash::config_models::data_directory::DataDirectory;
-use neptune_cash::config_models::network::Network;
+use neptune_privacy::config_models::data_directory::DataDirectory;
+use neptune_privacy::config_models::network::Network;
 
 use crate::rpc::client::RestRpcClient;
 use crate::rpc::Output;

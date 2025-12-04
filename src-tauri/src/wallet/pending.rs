@@ -1,8 +1,8 @@
 use anyhow::Result;
-use neptune_cash::api::export::Timestamp;
-use neptune_cash::api::export::TransactionDetails;
-use neptune_cash::api::export::TxProvingCapability;
-use neptune_cash::state::wallet::expected_utxo::UtxoNotifier;
+use neptune_privacy::api::export::Timestamp;
+use neptune_privacy::api::export::TransactionDetails;
+use neptune_privacy::api::export::TxProvingCapability;
+use neptune_privacy::state::wallet::expected_utxo::UtxoNotifier;
 use sqlx::Row;
 use sqlx::SqliteConnection;
 use sqlx::SqlitePool;
@@ -152,7 +152,7 @@ impl TransactionUpdater {
             let new_sender_randomness = wallet_state
                 .key
                 .generate_sender_randomness(tip_height, tx_output.receiver_digest());
-            tx_output.set_sender_randomness(new_sender_randomness);
+            tx_output.sender_randomness = new_sender_randomness;
         }
 
         let expected_utxo = wallet_state.extract_expected_utxos(&tx_outputs, UtxoNotifier::Myself);

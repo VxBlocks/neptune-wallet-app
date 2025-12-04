@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use dashmap::DashMap;
-use neptune_cash::api::export::SpendingKey;
+use neptune_privacy::api::export::SpendingKey;
 
 pub(super) struct KeyCache {
     symmetric_keys: DashMap<u64, Arc<SpendingKey>>,
