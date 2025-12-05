@@ -61,7 +61,7 @@ export default function EditRemoteModal({ opened, value, close }: { opened: bool
             />
             <Flex direction={"row"} justify={"space-between"}>
                 <Button variant="default" w={"40%"} onClick={() => {
-                    setNewValue("https://nptwallet.vxb.ai")
+                    setNewValue("http://127.0.0.1:9900")
                 }}>Restore default</Button>
                 <Button variant={"light"} w={"40%"} disabled={!newValue} onClick={handleUpdate}>Update</Button>
             </Flex>

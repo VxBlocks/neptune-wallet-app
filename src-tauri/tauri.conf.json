@@ -26,8 +26,8 @@
       }
     }
   },
-  "productName": "NeptuneWallet",
-  "mainBinaryName": "NeptuneWallet",
+  "productName": "NeptunePrivacyWallet",
+  "mainBinaryName": "NeptunePrivacyWallet",
   "identifier": "ai.vxb.neptune.wallet",
   "plugins": {},
   "app": {

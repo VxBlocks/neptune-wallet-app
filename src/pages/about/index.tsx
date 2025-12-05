@@ -16,7 +16,7 @@ export default function AboutPage() {
         dispatch(queryAboutInfo())
         dispatch(checkHasUpdateVersion())
     }, [dispatch])
-    return (<WithTitlePageHeader title="Neptune wallet Service">
+    return (<WithTitlePageHeader title="Neptune Privacy wallet Service">
         <Table variant="vertical"
             layout="fixed"
             withRowBorders={false}

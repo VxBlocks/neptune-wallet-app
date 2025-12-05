@@ -3413,7 +3413,7 @@ dependencies = [
 [[package]]
 name = "neptune-privacy"
 version = "0.1.0"
-source = "git+https://github.com/neptuneprivacy/xnt-core?rev=9afe0af#9afe0af60097454a39c21d009669bb6af74f7839"
+source = "git+https://git.softly.com/Softly/xnt-core?rev=e81596a672#e81596a6721239dd452a7e05e19bfb5b3ed0b819"
 dependencies = [
  "aead",
  "aes-gcm",
@@ -8655,7 +8655,7 @@ checksum = "ea6fc2961e4ef194dcbfe56bb845534d0dc8098940c7e5c012a258bfec6701bd"
 [[package]]
 name = "xnt-rpc-macros"
 version = "0.1.0"
-source = "git+https://github.com/neptuneprivacy/xnt-core?rev=9afe0af#9afe0af60097454a39c21d009669bb6af74f7839"
+source = "git+https://git.softly.com/Softly/xnt-core?rev=e81596a672#e81596a6721239dd452a7e05e19bfb5b3ed0b819"
 dependencies = [
  "convert_case 0.8.0",
  "quote",

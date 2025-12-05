@@ -10,6 +10,7 @@ export default function HistoryPage() {
     const [section, setSection] = useState('activity');
     const perDay = useActivityPerDay();
 
+    console.log("perDay: ", perDay)
     // 计算数据最大值的1.2倍
     const getYAxisMax = () => {
         if (!perDay || perDay.length === 0) return 'auto';
@@ -40,7 +41,7 @@ export default function HistoryPage() {
                 }}
                 dataKey="data"
                 withTooltip={false}
-                valueFormatter={(value) => new Intl.NumberFormat('en-US').format(Math.floor(value))}
+                valueFormatter={(value) => value.toString()}
                 withBarValueLabel
                 valueLabelProps={{ fill: 'teal' }}
                 style={{ marginBottom: 10 }}

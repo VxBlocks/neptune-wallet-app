@@ -18,7 +18,7 @@ export default function HomeScreen() {
         {
             activityPage === "" && <Card shadow="sm" radius="md" withBorder w={500} h={400}>
                 <Group justify="center" mb="xs">
-                    <Text fz="lg" fw={"800"}>Neptune Wallet</Text>
+                    <Text fz="lg" fw={"800"}>Neptune Privacy Wallet</Text>
                 </Group>
                 <Flex justify={"center"} align={"center"}>
                     <Image

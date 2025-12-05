@@ -58,7 +58,7 @@ function LockPage() {
             <Center w={"100%"} h={"100vh"}>
                 <Card shadow="sm" padding="lg" radius="md" withBorder w={"60%"}>
                     <Group justify="center" mb="xs">
-                        <Text fz="lg" fw={"800"}>Neptune Wallet</Text>
+                        <Text fz="lg" fw={"800"}>Neptune Privacy Wallet</Text>
                     </Group>
                     <Flex justify={"center"} align={"center"}>
                         <Image

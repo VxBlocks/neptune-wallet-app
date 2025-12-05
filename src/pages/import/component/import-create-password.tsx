@@ -36,7 +36,7 @@ export default function ImportCreatePassword({ nextStep }: { nextStep: () => voi
     }
     return (<Flex direction="column" justify={"center"} align="center" gap={8} w={"100%"}>
         <Text fz={16} fw={600} style={{ textAlign: "center" }}>
-            This password will unlock your neptune wallet only on this device. Neptune Wallet can not recover this password.
+            This password will unlock your neptune privacy wallet only on this device. Neptune Privacy Wallet can not recover this password.
         </Text>
         <Stack w={"100%"}>
             <PasswordInput

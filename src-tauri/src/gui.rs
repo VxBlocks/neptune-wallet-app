@@ -35,7 +35,7 @@ pub fn run() {
     #[cfg(all(desktop, target_os = "linux"))]
     std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
 
-    info!("Starting Neptune Cash");
+    info!("Starting Neptune Privacy");
 
     let builder = tauri::Builder::default();
     let builder = super::add_commands(builder);

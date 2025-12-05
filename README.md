@@ -1,14 +1,14 @@
-# vxb neptune wallet
+# xnt wallet
 
-vxb neptune wallet is a cross-platform wallet for [neptunecash](https://github.com/Neptune-Crypto/neptune-core).
+xnt wallet is a cross-platform wallet for [neptuneprivacy](https://github.com/privacy/xnt-core).
 
 ## download
 
-You can get compiled installer and docs here: <https://github.com/VxBlocks/vxb_neptune_wallet>
+You can get compiled installer and docs here: <https://github.com/neptuneprivacy/xnt_wallet>
 
 ## development
 
-Refer to [neptune-wallet-core](https://github.com/VxBlocks/neptune-wallet-core) for server side source code. or read [self hosted server](#self-hosted-server) to run self hosted server.
+Refer to [xnt-core](https://github.com/neptuneprivacy/xnt-core) for server side source code. or read [self hosted server](#self-hosted-server) to run self hosted server.
 
 ### prerequisites
 
@@ -56,14 +56,14 @@ NOTE: android version can be compiled now, but the frontend is not ready, you ca
 
 ### self hosted server
 
-The wallet use a patched version of `neptune-core` to support rest api.
+The wallet use a patched version of `xnt-core` to support rest api.
 
 To run a self hosted server, you need to:
 
 ```bash
-git clone https://github.com/VxBlocks/neptune-wallet-core -b wallet
-cd neptune-wallet-core
-cargo run --release -- --rest-port 9800
+git clone https://github.com/neptuneprivacy/xnt-core -b wallet
+cd xnt-core
+cargo run --release --bin xnt-core -- --rest-port 9800
 ```
 
 Then you can set your server url in the wallet settings.
