@@ -1,6 +1,6 @@
 # xnt wallet
 
-xnt wallet is a cross-platform wallet for [neptuneprivacy](https://github.com/privacy/xnt-core).
+xnt wallet is a cross-platform wallet for [neptuneprivacy](https://github.com/neptuneprivacy/xnt-core).
 
 ## download
 
