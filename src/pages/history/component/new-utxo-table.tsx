@@ -47,7 +47,7 @@ export default function NewUtxoTable() {
             <Table.Td>
                 <Checkbox
                     aria-label="Select row"
-                    disabled={element.locked||element.confirm_height > 21310}
+                    disabled={element.locked}
                     checked={selectedRows.includes(element.id)}
                     onChange={(event) =>
                         setSelectedRows(
@@ -64,7 +64,7 @@ export default function NewUtxoTable() {
                 </Center>
             </Table.Td>
             <Table.Td>
-                <Text c={element.confirm_height > 21310? "#FF0000":"#0A8030"}>
+                <Text c={"#0A8030"}>
                     <NumberFormatter value={element.confirm_height} thousandSeparator />
                 </Text>
             </Table.Td>
@@ -117,6 +117,7 @@ export default function NewUtxoTable() {
                 }
                 <Flex justify={"end"} gap={16}>
                     <Flex direction={"row"} gap={8}>
+                        <Text>UTXO count:{availableUtxos?.length}</Text>
                         <Text>{"Contain Locked"}</Text>
                         <Switch
                             checked={containLocked}
