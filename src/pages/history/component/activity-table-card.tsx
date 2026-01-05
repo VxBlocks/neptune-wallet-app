@@ -64,7 +64,7 @@ export default function ActivityTableCard() {
                 loaderProps={{ color: 'pink' }}
             />
             {
-                <ScrollArea h={"calc(100vh - 320px)"} scrollbarSize={0}>
+                <ScrollArea h={"calc(100vh - 420px)"} scrollbarSize={0}>
                     <Table striped highlightOnHover stickyHeaderOffset={0} stickyHeader verticalSpacing={"sm"} withRowBorders={false}>
                         <Table.Thead>
                             <Table.Tr>
