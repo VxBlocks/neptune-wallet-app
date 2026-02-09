@@ -12,7 +12,6 @@ use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Result;
 use neptune_cash::api::export::Network;
-use neptune_cash::application::rest_server::ExportedBlock;
 use neptune_cash::prelude::tasm_lib::prelude::Digest;
 use serde::Deserialize;
 use serde::Serialize;
@@ -23,6 +22,7 @@ use tokio::io::AsyncWriteExt;
 use tracing::*;
 
 use crate::rpc_client;
+use crate::wallet::block::WalletBlock;
 use crate::wallet::block_cache::BlockCache;
 use crate::wallet::block_cache::BlockCacheImpl;
 
@@ -69,7 +69,7 @@ impl FakeArchivalState {
         &self,
         height: u64,
         batch_size: u64,
-    ) -> Option<Vec<ExportedBlock>> {
+    ) -> Option<Vec<WalletBlock>> {
         if let Some(reader) = self.snapshot_reader.as_ref() {
             return reader
                 .read_blocks(self.network, (height..height + batch_size).into())
@@ -78,7 +78,7 @@ impl FakeArchivalState {
         None
     }
 
-    pub async fn get_block_by_height(&self, height: u64) -> Result<Option<ExportedBlock>> {
+    pub async fn get_block_by_height(&self, height: u64) -> Result<Option<WalletBlock>> {
         if let Some(block) = self.block_cache.get_block_by_height(height).await? {
             return Ok(Some(block.clone()));
         }
@@ -95,7 +95,7 @@ impl FakeArchivalState {
     }
 
     #[allow(dead_code)]
-    pub async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<ExportedBlock>> {
+    pub async fn get_block_by_digest(&self, digest: Digest) -> Result<Option<WalletBlock>> {
         if let Some(block) = self.block_cache.get_block_by_digest(digest).await? {
             return Ok(Some(block.clone()));
         }
@@ -357,7 +357,7 @@ impl SnapshotReader {
         Ok(Self { snapshots })
     }
 
-    async fn read_blocks(&self, network: Network, range: Range<u64>) -> Option<Vec<ExportedBlock>> {
+    async fn read_blocks(&self, network: Network, range: Range<u64>) -> Option<Vec<WalletBlock>> {
         for metadata in &self.snapshots {
             if metadata.network == SnapshotNetwork(network) && metadata.contains_block(range) {
                 debug!(
@@ -384,7 +384,7 @@ impl SnapshotReader {
     async fn read_block_from_snapshot(
         metadata: &SnapshotMetadata,
         range: Range<u64>,
-    ) -> Result<Vec<ExportedBlock>> {
+    ) -> Result<Vec<WalletBlock>> {
         let mut file = File::open(&metadata.path)
             .await
             .context("open snapshot file")?;
@@ -417,7 +417,7 @@ impl SnapshotReader {
         file: &mut File,
         dict: Arc<Vec<u8>>,
         height: u64,
-    ) -> Result<ExportedBlock> {
+    ) -> Result<WalletBlock> {
         let pos = Self::block_position(file, height)
             .await
             .context("get block position")?;
@@ -430,14 +430,14 @@ impl SnapshotReader {
             .await
             .context("read compressed block")?;
 
-        let block = tokio::task::spawn_blocking(move || -> Result<ExportedBlock> {
+        let block = tokio::task::spawn_blocking(move || -> Result<WalletBlock> {
             let mut decoder =
                 zstd::Decoder::with_dictionary(&buffer[..], &dict).context("create decoder")?;
 
             let mut decoded = Vec::new();
             decoder.read_to_end(&mut decoded).context("decode block")?;
             let block =
-                bincode::deserialize::<ExportedBlock>(&decoded).context("deserialize block")?;
+                bincode::deserialize::<WalletBlock>(&decoded).context("deserialize block")?;
             Ok(block)
         })
         .await??;

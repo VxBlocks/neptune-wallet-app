@@ -197,11 +197,8 @@ impl super::WalletState {
                 utxo.sender_randomness,
                 utxo.receiver_preimage,
             ) {
-                Ok(msmp) => msmp,
-                Err(err) => bail!(
-                    "Server returned bad mutator set membership proof recovery data: {}",
-                    err.to_string()
-                ),
+                Some(msmp) => msmp,
+                None => bail!("Server returned bad mutator set membership proof recovery data",),
             };
 
             unlocked.push(UnlockedUtxo::unlock(
@@ -213,8 +210,8 @@ impl super::WalletState {
 
         Ok((
             unlocked,
-            msmps_recovery_data.tip_mutator_set,
-            msmps_recovery_data.tip_height,
+            msmps_recovery_data.synced_mutator_set.into(),
+            msmps_recovery_data.synced_height.into(),
         ))
     }
 

@@ -2,6 +2,7 @@ use anyhow::Result;
 use itertools::Itertools;
 use neptune_cash::api::export::Tip5;
 use neptune_cash::prelude::tasm_lib;
+use neptune_cash::prelude::triton_vm::prelude::BFieldElement;
 use neptune_cash::prelude::triton_vm::vm::PublicInput;
 use neptune_cash::protocol::consensus::transaction::primitive_witness::PrimitiveWitness;
 use neptune_cash::protocol::consensus::transaction::transaction_kernel::TransactionKernelField;
@@ -90,10 +91,11 @@ impl super::ProofBuilder {
             .enumerate()
         {
             debug!("proving type script number {i}: {}", tsaw.program.hash());
-            let input = [txk_mast_hash, salted_inputs_hash, salted_outputs_hash]
-                .into_iter()
-                .flat_map(|d| d.reversed().values())
-                .collect_vec();
+            let input: Vec<BFieldElement> =
+                [txk_mast_hash, salted_inputs_hash, salted_outputs_hash]
+                    .into_iter()
+                    .flat_map(|d| d.reversed().values())
+                    .collect_vec();
             let claim = Claim::new(tsaw.program.hash()).with_input(input);
 
             let type_script_halt =

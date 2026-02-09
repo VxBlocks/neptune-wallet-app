@@ -1,14 +1,14 @@
 use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Result;
-use neptune_cash::application::rest_server::ExportedBlock;
 use neptune_cash::prelude::tasm_lib::prelude::Digest;
 use tracing::debug;
 
 use crate::rpc_client;
+use crate::wallet::block::WalletBlock;
 
 impl super::WalletState {
-    pub async fn check_fork(&self, block: &ExportedBlock) -> Result<Option<(u64, Digest)>> {
+    pub async fn check_fork(&self, block: &WalletBlock) -> Result<Option<(u64, Digest)>> {
         if block.kernel.header.height.value() <= 1 {
             return Ok(None);
         }
@@ -33,18 +33,24 @@ impl super::WalletState {
 
                     match prev {
                         Some(prev) => {
-                            if prev.is_canonical {
-                                let blk_before_fork = rpc_client::node_rpc_client()
-                                    .get_block_info(&prev.prev_block_digest.to_hex())
-                                    .await?
-                                    .context("try get_block_info before fork")?;
+                            let prev_height: u64 = prev.height.into();
+
+                            // this rpc always returns the canonical chain so we can check against it
+                            let canonical_at_height = rpc_client::node_rpc_client()
+                                .request_block(prev_height)
+                                .await?
+                                .context("try get canonical block by height")?;
+
+                            // If the digest at this height matches the canonical chain, we found
+                            // the common ancestor and can reorg to its parent.
+                            if canonical_at_height.hash() == prev_digest {
                                 return Ok(Some((
-                                    blk_before_fork.height.into(),
-                                    blk_before_fork.digest,
+                                    prev_height.saturating_sub(1),
+                                    prev.prev_block_digest,
                                 )));
-                            } else {
-                                prev_digest = prev.prev_block_digest;
                             }
+
+                            prev_digest = prev.prev_block_digest;
                         }
                         None => return Err(anyhow!("Block not found")),
                     }

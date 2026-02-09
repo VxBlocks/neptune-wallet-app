@@ -18,11 +18,14 @@ tauri-build = { version = "2", features = [], optional = true }
 chrono = "0.4.42"
 
 [dependencies.neptune-cash]
-git = "https://github.com/VxBlocks/neptune-wallet-core"
-# branch = "wallet-server"
-rev = "c787777"
-default-features = false
-features = ["rest"]
+git = "https://github.com/VxBlocks/neptune-wallet-core.git"
+# branch = "wallet-lib"
+rev = "acdcab0"
+
+[dependencies.neptune-rpc-client]
+git = "https://github.com/VxBlocks/neptune-wallet-core.git"
+# branch = "wallet-lib"
+rev = "acdcab0"
 
 [dependencies]
 tauri = { version = "2", features = [

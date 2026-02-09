@@ -13,7 +13,6 @@ use neptune_cash::api::export::Network;
 use neptune_cash::api::export::Tip5;
 use neptune_cash::api::export::Utxo;
 use neptune_cash::application::config::data_directory::DataDirectory;
-use neptune_cash::application::rest_server::ExportedBlock;
 use neptune_cash::prelude::tasm_lib::prelude::Digest;
 use neptune_cash::protocol::consensus::block::mutator_set_update::MutatorSetUpdate;
 use neptune_cash::protocol::proof_abstractions::mast_hash::MastHash;
@@ -35,6 +34,7 @@ use wallet_state_table::UtxoDbData;
 use crate::config::wallet::ScanConfig;
 use crate::config::wallet::WalletConfig;
 use crate::config::Config;
+use crate::wallet::block::WalletBlock;
 
 // mod archive_state;
 pub mod balance;
@@ -42,6 +42,7 @@ pub mod fake_archival_state;
 pub mod fork;
 mod input;
 pub use input::InputSelectionRule;
+pub mod block;
 pub mod block_cache;
 mod key_cache;
 mod keys;
@@ -153,7 +154,7 @@ impl WalletState {
     pub async fn update_new_tip(
         &self,
         previous_mutator_set_accumulator: &MutatorSetAccumulator,
-        block: &ExportedBlock,
+        block: &WalletBlock,
         should_update: bool,
     ) -> Result<Option<u64>> {
         let mut msa_state = previous_mutator_set_accumulator.clone();
@@ -204,8 +205,8 @@ impl WalletState {
                 );
                 recovery_datas.push(r);
 
-                if incoming_utxo.is_guesser_fee() {
-                    gusser_preimage = Some(incoming_utxo.receiver_preimage());
+                if incoming_utxo.is_guesser_fee {
+                    gusser_preimage = Some(incoming_utxo.receiver_preimage);
                 }
             }
 
@@ -265,7 +266,7 @@ impl WalletState {
             .await?
             .into_iter()
             .map(|(recovery, txid)| {
-                let digest = Tip5::hash(recovery.utxo());
+                let digest = Tip5::hash(&recovery.utxo);
                 (digest, txid)
             })
             .collect_vec();
@@ -296,7 +297,7 @@ impl WalletState {
 
     async fn par_scan_for_incoming_utxo(
         &self,
-        block: &ExportedBlock,
+        block: &WalletBlock,
     ) -> anyhow::Result<Vec<IncomingUtxo>> {
         let transaction = &block.kernel.body.transaction_kernel();
 
@@ -347,13 +348,11 @@ impl WalletState {
                 .guesser_fee_utxos()
                 .expect("Exported block must have guesser fee UTXOs")
                 .into_iter()
-                .map(|utxo| {
-                    IncomingUtxo::new(
-                        utxo,
-                        sender_randomness,
-                        own_guesser_key.receiver_preimage(),
-                        true,
-                    )
+                .map(|utxo| IncomingUtxo {
+                    utxo,
+                    sender_randomness,
+                    receiver_preimage: own_guesser_key.receiver_preimage(),
+                    is_guesser_fee: true,
                 })
                 .collect_vec()
         } else {
@@ -373,7 +372,7 @@ impl WalletState {
     /// Returns a list of tuples (utxo, absolute-index-set, index-into-database).
     async fn scan_for_spent_utxos(
         &self,
-        block: &ExportedBlock,
+        block: &WalletBlock,
     ) -> Result<Vec<(Utxo, AbsoluteIndexSet, i64)>> {
         let confirmed_absolute_index_sets = block
             .kernel
@@ -401,7 +400,7 @@ impl WalletState {
     // returns IncomingUtxo and
     pub async fn scan_for_expected_utxos(
         &self,
-        block: &ExportedBlock,
+        block: &WalletBlock,
     ) -> Result<Vec<(IncomingUtxo, String)>> {
         let MutatorSetUpdate {
             additions: addition_records,
@@ -451,19 +450,16 @@ fn incoming_utxo_recovery_data_from_incomming_utxo(
     utxo: IncomingUtxo,
     msa_state: &MutatorSetAccumulator,
 ) -> UtxoRecoveryData {
-    let utxo_digest = Tip5::hash(utxo.utxo());
-    let new_own_membership_proof = msa_state.prove(
-        utxo_digest,
-        utxo.sender_randomness(),
-        utxo.receiver_preimage(),
-    );
+    let utxo_digest = Tip5::hash(&utxo.utxo);
+    let new_own_membership_proof =
+        msa_state.prove(utxo_digest, utxo.sender_randomness, utxo.receiver_preimage);
 
     let aocl_index = new_own_membership_proof.aocl_leaf_index;
 
     UtxoRecoveryData {
-        utxo: utxo.utxo().to_owned(),
-        sender_randomness: utxo.sender_randomness(),
-        receiver_preimage: utxo.receiver_preimage(),
+        utxo: utxo.utxo,
+        sender_randomness: utxo.sender_randomness,
+        receiver_preimage: utxo.receiver_preimage,
         aocl_index,
     }
 }
